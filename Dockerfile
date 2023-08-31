@@ -1,4 +1,14 @@
-FROM alpine:latest
+FROM ubuntu:latest
+
+RUN apt update && apt-get install -y golang-go sudo
+
+WORKDIR /app_dir
+COPY ./ /app_dir/
+
+RUN go build -o main ./src/main.go
+RUN chmod +x main
+
+CMD ["/app_dir/main"]
 
 # Add the commands needed to put your compiled go binary in the container and
 # run it when the container starts.
