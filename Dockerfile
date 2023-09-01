@@ -5,7 +5,7 @@ RUN apt update && apt-get install -y golang-go sudo
 WORKDIR /app_dir
 COPY ./ /app_dir/
 
-RUN go build -o main ./src/main.go
+RUN go build -o main ./cmd/main/main.go
 RUN chmod +x main
 
 CMD ["/app_dir/main"]
