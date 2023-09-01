@@ -9,4 +9,5 @@ func main(){
     // TODO...
     var id = src.NewRandomKademliaID() 
     fmt.Println("This is random Node: ", id)
+    for {}
 }
