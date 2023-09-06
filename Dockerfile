@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y curl
 RUN curl -OL "https://golang.org/dl/go1.21.0.linux-amd64.tar.gz"
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.0.linux-amd64.tar.gz
 #RUN apt update && apt-get install -y golang-go sudo
-RUN export PATH=$PATH:/usr/local/go/bin
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 WORKDIR /app_dir
 COPY ./ /app_dir/
