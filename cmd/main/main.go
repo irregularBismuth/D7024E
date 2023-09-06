@@ -36,10 +36,12 @@ func main(){
 
     var id = src.NewRandomKademliaID() 
     a:=src.NewContact(id,GetOutboundIP().String());
-    fmt.Println("This is random Node: ", id)
     
+    fmt.Println("This is random Node: ", id)
+        
 
     fmt.Println(a.Address);
+    src.Listen("localhost",8888)
     
     for {}
 }
