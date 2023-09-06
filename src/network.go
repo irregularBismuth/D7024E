@@ -1,9 +1,11 @@
 package src
 
 import (
-    "net"
- //   "strconv"
-    "fmt"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"strings"
 )
 
 
@@ -23,9 +25,28 @@ func handleConnection(connection net.Conn) {
     connection.Close()
 }
 
+// Get preferred outbound ip of this machine
+func GetOutboundIP() net.IP {
+    conn, err := net.Dial("udp", "8.8.8.8:80")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer conn.Close()
+
+    localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+    return localAddr.IP
+}
+
 func Listen(ip string, port int) {
 	// TODO 
 //    strCat:=ip + ":" + strconv.Itoa(port)
+    master_node := os.Getenv("BN")
+    if master_node == "1" {
+        master_ip := GetOutboundIP()
+        fmt.Println(master_ip)
+
+    }
     addr:="localhost:8888"
     ln,err := net.Listen("tcp",addr)
     if err!=nil { }
