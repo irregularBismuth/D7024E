@@ -2,6 +2,7 @@ package src
 
 import (
     "net"
+    "fmt"
 )
 
 
@@ -11,6 +12,7 @@ type Network struct {
 
 func Listen(ip string, port int) {
 	// TODO
+    fmt.Println("peepoepeopoeppeo")
     var udp = net.UDPAddr{
         IP: net.IP(ip),
         Port: port,
