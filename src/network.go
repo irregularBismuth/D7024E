@@ -2,8 +2,9 @@ package src
 
 import (
     "net"
- //   "strconv"
+    "strconv"
     "fmt"
+    "os"
 )
 
 
@@ -25,16 +26,15 @@ func handleConnection(connection net.Conn) {
 
 func Listen(ip string, port int) {
 	// TODO 
-//    strCat:=ip + ":" + strconv.Itoa(port)
-    addr:="localhost:8888"
-    ln,err := net.Listen("tcp",addr)
-    if err!=nil { }
-    for { 
-        conn,err := ln.Accept()
-        if err!=nil {}
-        go handleConnection(conn)
+    fmt.Printf("enter listen func")
+    envVar:=os.Getenv("BN")
+    bootNodevar,err := strconv.Atoi(envVar)
+    if err!=nil {
+        fmt.Println("error converting BN to int",err)
     }
+    fmt.Println("bn:",bootNodevar) 
 
+    return
 
 }
 

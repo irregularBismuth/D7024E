@@ -39,9 +39,9 @@ func main(){
     
     fmt.Println("This is random Node: ", id)
         
-
+   // fmt.Println("BN : ",os.Getenv("BN"))
     fmt.Println(a.Address);
     src.Listen("localhost",8888)
-    
+    fmt.Println("132 3212")    
     for {}
 }

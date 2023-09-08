@@ -13,7 +13,7 @@ services:
     stdin_open: true
     tty: true
     environment: 
-      - BN= 1
+      - BN=1
     deploy:
       mode: replicated
       replicas: 1 
@@ -36,7 +36,7 @@ services:
     stdin_open: true
     tty: true
     environment: 
-      - BN= 0
+      - BN=0
     deploy:
       mode: replicated
       replicas: 5  
