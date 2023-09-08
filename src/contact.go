@@ -9,7 +9,7 @@ package src
 // stores the KademliaID, the ip address and the distance
 type Contact struct {
 	ID       *KademliaID
-	Address  string
+	Address  string //IP address and port
 	distance *KademliaID
 }
 

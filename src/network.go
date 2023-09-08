@@ -9,7 +9,12 @@ import (
 
 
 type Network struct {
-    
+    node *Kademlia 
+}
+
+func InitBootstrap(ip net.IP) {
+    //bn := InitNode(ip)
+    // call GetOutboundIP and assign the node based on the environment variable for the bootstrap node
 }
 
 func handleConnection(connection net.Conn) {
