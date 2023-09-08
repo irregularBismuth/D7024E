@@ -9,7 +9,7 @@ import (
 
 
 type Network struct {
-    
+    kademliaNodes *kademlia     
 }
 
 func handleConnection(connection net.Conn) {
@@ -24,17 +24,22 @@ func handleConnection(connection net.Conn) {
     connection.Close()
 }
 
-func Listen(ip string, port int) {
-	// TODO 
-    fmt.Printf("enter listen func")
-    envVar:=os.Getenv("BN")
+func fetchEnvVar(envvar string) (bootNodevar int) {
+    envVar:=os.Getenv(envvar)
     bootNodevar,err := strconv.Atoi(envVar)
     if err!=nil {
         fmt.Println("error converting BN to int",err)
     }
-    fmt.Println("bn:",bootNodevar) 
+    return 
+}
 
-    return
+func Listen(ip string, port int) {
+	// TODO 
+    bootstrapNode:= fetchEnvVar("BN")
+    if bootstrapNode == 1 {
+        fmt.Println("peepo peepo")
+    }
+    
 
 }
 
