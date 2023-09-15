@@ -33,15 +33,21 @@ func main(){
     // TODO...
     //var listener = src.Listen("127.0.0.1", )
     //fmt.Println("Socket open for listen at: ", )
+    
+    kademliaNode:=src.InitNode(GetOutBoundIP())
 
-    var id = src.NewRandomKademliaID() 
+
+
+ /*   var id = src.NewRandomKademliaID() 
     a:=src.NewContact(id,GetOutboundIP().String());
     
     fmt.Println("This is random Node: ", id)
         
-
+   // fmt.Println("BN : ",os.Getenv("BN"))
     fmt.Println(a.Address);
     src.Listen("localhost",8888)
-    
+    fmt.Println("132 3212")*/
+
+
     for {}
 }

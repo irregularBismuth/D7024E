@@ -1,20 +1,31 @@
 package src
 
 import (
+<<<<<<< HEAD
 	"fmt"
 	"log"
 	"net"
 	"os"
+=======
+    "net"
+    "strconv"
+    "fmt"
+    "os"
+>>>>>>> 235f8d44dd5b61580813b9065e9f0050ff3be5f4
 )
 
 
 type Network struct {
+<<<<<<< HEAD
     node *Kademlia 
 }
 
 func InitBootstrap(ip net.IP) {
     //bn := InitNode(ip)
     // call GetOutboundIP and assign the node based on the environment variable for the bootstrap node
+=======
+    kademliaNodes *kademlia     
+>>>>>>> 235f8d44dd5b61580813b9065e9f0050ff3be5f4
 }
 
 func handleConnection(connection net.Conn) {
@@ -29,6 +40,7 @@ func handleConnection(connection net.Conn) {
     connection.Close()
 }
 
+<<<<<<< HEAD
 // Get preferred outbound ip of this machine
 func GetOutboundIP() net.IP {
     conn, err := net.Dial("udp", "8.8.8.8:80")
@@ -40,10 +52,20 @@ func GetOutboundIP() net.IP {
     localAddr := conn.LocalAddr().(*net.UDPAddr)
 
     return localAddr.IP
+=======
+func fetchEnvVar(envvar string) (bootNodevar int) {
+    envVar:=os.Getenv(envvar)
+    bootNodevar,err := strconv.Atoi(envVar)
+    if err!=nil {
+        fmt.Println("error converting BN to int",err)
+    }
+    return 
+>>>>>>> 235f8d44dd5b61580813b9065e9f0050ff3be5f4
 }
 
 func Listen(ip string, port int) {
 	// TODO 
+<<<<<<< HEAD
 //    strCat:=ip + ":" + strconv.Itoa(port)
     master_node := os.Getenv("BN")
     if master_node == "1" {
@@ -58,8 +80,13 @@ func Listen(ip string, port int) {
         conn,err := ln.Accept()
         if err!=nil {}
         go handleConnection(conn)
+=======
+    bootstrapNode:= fetchEnvVar("BN")
+    if bootstrapNode == 1 {
+        fmt.Println("peepo peepo")
+>>>>>>> 235f8d44dd5b61580813b9065e9f0050ff3be5f4
     }
-
+    
 
 }
 
