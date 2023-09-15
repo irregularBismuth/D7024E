@@ -10,9 +10,9 @@ type Kademlia struct {
     data map[string]string
 }
 
-func InitNode(ip net.IP) Kademlia {
+func InitNode(address net.Addr) Kademlia {
     var id_node *KademliaID = NewRandomKademliaID()
-    var new_contact Contact = NewContact(id_node, ip.String())
+    var new_contact Contact = NewContact(id_node, address.String())
     var routing_table RoutingTable = *NewRoutingTable(new_contact)
     
     return Kademlia{
@@ -31,11 +31,12 @@ func (kademlia *Kademlia) LookupContact(target *Contact) {
     // If bucket is not full, the new contact is added at the end. 
 
     shortlist_closest_contacts := kademlia.node_contact.FindClosestContacts(target.ID, 3)
-    contact_list := ContactCandidates{}
+    //contact_list := ContactCandidates{}
     //kademlia.contact_table.buckets
 
     for i := 0; i < len(shortlist_closest_contacts); i++ {
         contact := shortlist_closest_contacts[i]
+        println(contact.String())
         // call RPC for FIND_NODE here
         
         
