@@ -6,8 +6,7 @@ import (
 
 // Kademlia nodes store contact information about each other <IP, UDP port, Node ID>
 type Kademlia struct {
-    node_contact Contact
-    contact_table RoutingTable
+    node_contact RoutingTable
     data map[string]string
 }
 
@@ -17,14 +16,31 @@ func InitNode(ip net.IP) Kademlia {
     var routing_table RoutingTable = *NewRoutingTable(new_contact)
     
     return Kademlia{
-        node_contact: new_contact,
-        contact_table: routing_table,
+        node_contact: routing_table,
         data: make(map[string]string),
     }
 }
-
+// Node lookup algorithm 
 func (kademlia *Kademlia) LookupContact(target *Contact) {
-	// TODO
+	// *Node position = shortest unique prefix in tree
+    // 1. Pick nodes for the closest non-empty k-bucket
+    // 2. Send parallel async "FIND_NODE" RPCs
+
+    // NOTE: Whenever a node receives a communication from another, it updates the corresponding bucket.
+    // If the contact already exists, it is moved to the end of the bucket.
+    // If bucket is not full, the new contact is added at the end. 
+
+    shortlist_closest_contacts := kademlia.node_contact.FindClosestContacts(target.ID, 3)
+    contact_list := ContactCandidates{}
+    //kademlia.contact_table.buckets
+
+    for i := 0; i < len(shortlist_closest_contacts); i++ {
+        contact := shortlist_closest_contacts[i]
+        // call RPC for FIND_NODE here
+        
+        
+    }
+
 }
 
 func (kademlia *Kademlia) LookupData(hash string) {

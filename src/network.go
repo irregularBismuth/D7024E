@@ -63,12 +63,24 @@ func Listen(ip string, port int) {
 
 }
 
+// RPC calls: 
+
 func (network *Network) SendPingMessage(contact *Contact) {
 	// TODO
 }
 
 func (network *Network) SendFindContactMessage(contact *Contact) {
-	// TODO
+	// takes a 160-bit ID as an argument. 
+    
+    // NOTE: Whenever a node receives a communication from another, it updates the corresponding bucket.
+    // If the contact already exists, it is moved to the end of the bucket.
+    // If bucket is not full, the new contact is added at the end.
+    network.node.node_contact.AddContact(*contact)
+    closest_contact := network.node.node_contact.FindClosestContacts(contact.ID, 3)
+    for _, contact := range closest_contact{
+        // Call RPC "FIND_NODE" here
+    }
+
 }
 
 func (network *Network) SendFindDataMessage(hash string) {
