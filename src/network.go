@@ -1,11 +1,15 @@
 package src
 
 import (
-    "net"
-    "strconv"
-    "fmt"
-    "os"
-    "log"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"strconv"
+    "context"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/integration-cli/cli"
 )
 
 
@@ -14,9 +18,19 @@ type Network struct {
     srv *net.UDPAddr
 }
 
+type RPCMessage int
+
+const (
+    Unknown RPCMessage = iota
+    Ping 
+    Store
+    FindNode
+    FindValue
+)
+
 // Get preferred outbound ip of this machine - retreving the local (source) address 
 func GetOutboundIP() net.Addr {
-    conn, err := net.Dial("udp", "8.8.8.8:80")
+    conn, err := net.Dial("udp", "8.8.8.8:80") //The dial function connects to a server (CLIENT)
     if err != nil {
         log.Fatal(err)
     }
@@ -35,14 +49,16 @@ func (network *Network) InvokeServer() error{
     }
     
     // The ListenUDP method creates the server
-    udp_connection, err := net.ListenUDP("udp", udp_addr)
+    udp_connection, err := net.ListenUDP("udp", udp_addr) // (SERVER-SIDE)
     if err != nil {
         fmt.Println("Error creating UDP connection:", err)
         return err
     }
     fmt.Printf("udp_connection established: %v\n", udp_connection.LocalAddr().String())
     defer udp_connection.Close()
-    
+   
+    // HandleConnection logic should go here?
+    // Need to add logic for incoming and outgoing packets handling - channels?
     buffer := make([]byte, 1024)
     for {
         _, _, err := udp_connection.ReadFromUDP(buffer)
@@ -67,6 +83,7 @@ func InitNodeNetwork() Network{
 
 } 
 
+// Server side - handle receving incoming messages
 func HandleConnection(connection net.Conn) {
     buf := make([]byte,1024)
     len,err := connection.Read(buf)
@@ -96,17 +113,41 @@ func Listen(ip string, port int) {
     }
 }
 
+
 func (network *Network) ShowNodeStatus(){
     // method for showing node status and its data state
     println(network.kademliaNodes.node_contact.me.String())
 }
 
-func BootstrapLookup(){
+func (network *Network) BootstrapConnect(){
     bs_address, _ := net.LookupHost("bootNode")
     fmt.Println(bs_address)
+    bn_container_id := "bootNode"
+
+    //container_info, err := 
+    //conn, _ := net.DialUDP("udp", nil, bs_address[0])
+    
 }
 
-// RPC calls: 
+// RPC messages and RPC send manager: 
+
+func (network *Network) SendRPC(rpcMessageType RPCMessage, connection *net.UDPConn, address *net.UDPAddr){
+    switch rpcMessageType{
+    case Ping:
+        // Send Ping RPC call to a specific node
+    case Store:
+        // Send Store RPC package
+    case FindNode: 
+        // Send FIND_NODE RPC package to specific node
+    case FindValue:
+        // Send FIND_VALUE RPC package to specific node client
+    default:
+        fmt.Println("Unknown RPC message type!")
+    }
+
+}
+
+// TODO receiver method for handling received UDP messages
 
 func (network *Network) SendPingMessage(contact *Contact) {
 	// TODO
@@ -119,9 +160,7 @@ func (network *Network) SendFindContactMessage(contact *Contact) {
     // If the contact already exists, it is moved to the end of the bucket.
     // If bucket is not full, the new contact is added at the end.
     //network.kademliaNodes.node_contact.AddContact(*contact)
-    
     // Bootstrap node logic for initializing contact to the network
-
 
 }
 

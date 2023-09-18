@@ -14,6 +14,8 @@ services:
     tty: true
     environment: 
       - BN=1
+      - BN_PORT
+      - BN_IP
     deploy:
       mode: replicated
       replicas: 1 
@@ -26,8 +28,8 @@ services:
         delay: 5s
         max_attempts: 3
         window: 10s
-          #    ports:
-          #      - "4000:80"
+          # ports:
+          # - "8888:80"
     networks:
       - kademlia_network
 
