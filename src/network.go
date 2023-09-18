@@ -6,10 +6,6 @@ import (
 	"net"
 	"os"
 	"strconv"
-    "context"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/integration-cli/cli"
 )
 
 
@@ -41,13 +37,14 @@ func GetOutboundIP() net.Addr {
 }
 
 func (network *Network) InvokeServer() error{
-   
+  
     // binding UDP server through resolve (what port to listen to...)
-    udp_addr, err := net.ResolveUDPAddr("udp", network.srv.AddrPort().String())
+    udp_addr, err := network.SetPortBootstrap()
+    //udp_addr, err := net.ResolveUDPAddr("udp", network.srv.AddrPort().String())
     if err != nil {
         return err
     }
-    
+
     // The ListenUDP method creates the server
     udp_connection, err := net.ListenUDP("udp", udp_addr) // (SERVER-SIDE)
     if err != nil {
@@ -65,6 +62,20 @@ func (network *Network) InvokeServer() error{
         if err != nil {
             return err 
         }
+    }
+}
+
+func (network *Network) SetPortBootstrap() (*net.UDPAddr, error){
+    bootNodevar := FetchEnvVar("BN")
+    if bootNodevar == 1 {
+        port := 8080
+        network.srv.Port = port
+        //addr := fmt.Sprintf(":%d", port)
+        udp_addr, err := net.ResolveUDPAddr("udp", network.srv.AddrPort().String())
+        return udp_addr, err 
+    }else {
+        udp_addr, err := net.ResolveUDPAddr("udp", network.srv.AddrPort().String())
+        return udp_addr, err
     }
 }
 
@@ -105,11 +116,30 @@ func FetchEnvVar(envvar string) (bootNodevar int) {
     return 
 }
 
-func Listen(ip string, port int) {
+func (network *Network) Listen() {
 	// TODO 
-    bootstrapNode:= FetchEnvVar("BN")
-    if bootstrapNode == 1 {
-        fmt.Println("peepo peepo")
+    bootNodevar := FetchEnvVar("BN")
+    if bootNodevar == 1 {
+        println("This is boot node!")
+    } else if bootNodevar == 0 {
+        boot_address, _ := net.LookupHost("bootNode")
+        boot_port := 8080
+        boot_server := boot_address[0]+":"+string(boot_port)
+        boot_addr, _ := net.ResolveUDPAddr("udp", boot_server)
+
+        conn, err := net.DialUDP("udp", nil ,boot_addr)
+        if err != nil {
+            fmt.Println("Error creating UDP connection: ", err)
+            return 
+        }
+        defer conn.Close()
+        msg_test := []byte("hello boot node!")
+
+        _, err := conn.Write(msg_test)
+        if err != nil {
+            fmt.Println("Error sending msg:", err)
+            return 
+        }
     }
 }
 
@@ -122,8 +152,7 @@ func (network *Network) ShowNodeStatus(){
 func (network *Network) BootstrapConnect(){
     bs_address, _ := net.LookupHost("bootNode")
     fmt.Println(bs_address)
-    bn_container_id := "bootNode"
-
+    
     //container_info, err := 
     //conn, _ := net.DialUDP("udp", nil, bs_address[0])
     
