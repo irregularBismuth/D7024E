@@ -9,7 +9,7 @@ import (
 
 
 type Network struct {
-    kademliaNodes *kademlia     
+   // kademliaNodes *kademlia     
 }
 
 func handleConnection(connection net.Conn) {
@@ -36,9 +36,12 @@ func fetchEnvVar(envvar string) (bootNodevar int) {
 func Listen(ip string, port int) {
 	// TODO 
     bootstrapNode:= fetchEnvVar("BN")
-    if bootstrapNode == 1 {
-        fmt.Println("peepo peepo")
+    if bootstrapNode == 0{
+        bootStrapAdress:=os.Getenv("BNAD")
+
+    
     }
+    
     
 
 }

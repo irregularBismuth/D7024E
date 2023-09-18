@@ -10,6 +10,8 @@ services:
   
   bootNode:
     image: shakira:latest # Make sure your Docker image has this name.
+    ports:
+      - "5678:5678"
     stdin_open: true
     tty: true
     environment: 
@@ -26,6 +28,7 @@ services:
         delay: 5s
         max_attempts: 3
         window: 10s
+
           #    ports:
           #      - "4000:80"
     networks:
@@ -37,6 +40,8 @@ services:
     tty: true
     environment: 
       - BN=0
+      - BNAD=bootNode
+      - BNPT=5678
     deploy:
       mode: replicated
       replicas: 5  
