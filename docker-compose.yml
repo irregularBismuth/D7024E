@@ -5,17 +5,24 @@
 # command line flags, in order to actually get any replicas started. That
 # command requires that a docker swarm is already running in order to function.
 
+# See https://docs.docker.com/compose/compose-file/ for information about what
+# commands you can use in this file.
+#
+# Note that you must use the `docker stack deploy` command, with any required
+# command line flags, in order to actually get any replicas started. That
+# command requires that a docker swarm is already running in order to function.
+
 version: "3"
 services:
   
   bootNode:
     image: shakira:latest # Make sure your Docker image has this name.
+    ports:
+      - "5678:5678"
     stdin_open: true
     tty: true
     environment: 
       - BN=1
-      - BN_PORT
-      - BN_IP
     deploy:
       mode: replicated
       replicas: 1 
@@ -28,8 +35,9 @@ services:
         delay: 5s
         max_attempts: 3
         window: 10s
-          # ports:
-          # - "8888:80"
+
+          #    ports:
+          #      - "4000:80"
     networks:
       - kademlia_network
 
@@ -39,6 +47,8 @@ services:
     tty: true
     environment: 
       - BN=0
+      - BNAD=bootNode
+      - BNPT=5678
     deploy:
       mode: replicated
       replicas: 5  
@@ -58,3 +68,4 @@ services:
       
 networks:
   kademlia_network:
+

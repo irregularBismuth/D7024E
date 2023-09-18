@@ -58,20 +58,22 @@ func (network *Network) InvokeServer() error{
     // Need to add logic for incoming and outgoing packets handling - channels?
     buffer := make([]byte, 1024)
     for {
-        _, _, err := udp_connection.ReadFromUDP(buffer)
+        n, client, err := udp_connection.ReadFromUDP(buffer)
         if err != nil {
             return err 
         }
+        fmt.Printf("received %s from %s \n", string(buffer[:n]), client)
+
     }
 }
 
 func (network *Network) SetPortBootstrap() (*net.UDPAddr, error){
     bootNodevar := FetchEnvVar("BN")
     if bootNodevar == 1 {
-        port := 8080
-        network.srv.Port = port
-        //addr := fmt.Sprintf(":%d", port)
-        udp_addr, err := net.ResolveUDPAddr("udp", network.srv.AddrPort().String())
+        boot_port := "5678"
+        boot_ip, _ := net.LookupHost("bootNode")
+        boot_server := boot_ip[0]+":"+boot_port
+        udp_addr, err := net.ResolveUDPAddr("udp", boot_server)
         return udp_addr, err 
     }else {
         udp_addr, err := net.ResolveUDPAddr("udp", network.srv.AddrPort().String())
@@ -123,8 +125,8 @@ func (network *Network) Listen() {
         println("This is boot node!")
     } else if bootNodevar == 0 {
         boot_address, _ := net.LookupHost("bootNode")
-        boot_port := 8080
-        boot_server := boot_address[0]+":"+string(boot_port)
+        boot_port := os.Getenv("BNPT")
+        boot_server := boot_address[0]+":"+boot_port
         boot_addr, _ := net.ResolveUDPAddr("udp", boot_server)
 
         conn, err := net.DialUDP("udp", nil ,boot_addr)
@@ -135,12 +137,13 @@ func (network *Network) Listen() {
         defer conn.Close()
         msg_test := []byte("hello boot node!")
 
-        _, err := conn.Write(msg_test)
-        if err != nil {
-            fmt.Println("Error sending msg:", err)
+        _, errs := conn.Write(msg_test)
+        if errs != nil {
+            fmt.Println("Error sending msg:", errs)
             return 
         }
     }
+
 }
 
 
