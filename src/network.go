@@ -1,6 +1,7 @@
 package src
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -14,15 +15,28 @@ type Network struct {
     srv *net.UDPAddr
 }
 
-type RPCMessage int
+type RPCMessage string
 
 const (
-    Unknown RPCMessage = iota
-    Ping 
-    Store
-    FindNode
-    FindValue
+    Ping RPCMessage = "PING"
+    Store RPCMessage = "STORE"
+    FindNode RPCMessage = "FIND_NODE"
+    FindValue RPCMessage = "FIND_VALUE"
 )
+
+type MessageContactBuilder struct {
+    msg RPCMessage
+    contact *Contact
+}
+
+func CreateNewMessage(contact *Contact, msgType RPCMessage) MessageContactBuilder {
+
+    msgBuilder := MessageContactBuilder{
+        msg: msgType,
+        contact: contact,
+    }
+    return msgBuilder
+}
 
 // Get preferred outbound ip of this machine - retreving the local (source) address 
 func GetOutboundIP() net.Addr {
@@ -62,8 +76,15 @@ func (network *Network) InvokeServer() error{
         if err != nil {
             return err 
         }
-        fmt.Printf("received %s from %s \n", string(buffer[:n]), client)
+        returned_msg := MessageContactBuilder{}
 
+        decoded_json_err := json.Unmarshal(buffer[:n], &returned_msg)
+        if decoded_json_err != nil {
+            fmt.Println(decoded_json_err)
+        }
+        //fmt.Printf("received %s from %s \n", string(buffer[:n]), client)
+        fmt.Printf("Received: %+v from %s: ", returned_msg, client)
+        //udp_connection.WriteToUDP()
     }
 }
 
@@ -118,7 +139,20 @@ func FetchEnvVar(envvar string) (bootNodevar int) {
     return 
 }
 
-func (network *Network) Listen() {
+func BootnodeConnect(boot_addr *net.UDPAddr) (*net.UDPConn, error){
+
+    // 1. Connect to boot node 
+    conn, err := net.DialUDP("udp", nil ,boot_addr)
+    if err != nil {
+            fmt.Println("Error creating UDP connection: ", err)
+            return conn, err
+    }
+    //defer conn.Close()
+    return conn, err 
+        
+} 
+
+func (network *Network) ListenJoin() {
 	// TODO 
     bootNodevar := FetchEnvVar("BN")
     if bootNodevar == 1 {
@@ -128,20 +162,23 @@ func (network *Network) Listen() {
         boot_port := os.Getenv("BNPT")
         boot_server := boot_address[0]+":"+boot_port
         boot_addr, _ := net.ResolveUDPAddr("udp", boot_server)
+       
+        // 1. Connect to boot node 
+        conn, _ := BootnodeConnect(boot_addr) 
+       
+        // 2. add bootnode to k-bucket 
+        network.SendRPC(Ping, conn)
 
-        conn, err := net.DialUDP("udp", nil ,boot_addr)
-        if err != nil {
-            fmt.Println("Error creating UDP connection: ", err)
-            return 
-        }
         defer conn.Close()
-        msg_test := []byte("hello boot node!")
 
+        /*
+        msg_test := []byte("hello boot node!")
         _, errs := conn.Write(msg_test)
         if errs != nil {
             fmt.Println("Error sending msg:", errs)
             return 
         }
+        */
     }
 
 }
@@ -152,25 +189,23 @@ func (network *Network) ShowNodeStatus(){
     println(network.kademliaNodes.node_contact.me.String())
 }
 
-func (network *Network) BootstrapConnect(){
-    bs_address, _ := net.LookupHost("bootNode")
-    fmt.Println(bs_address)
-    
-    //container_info, err := 
-    //conn, _ := net.DialUDP("udp", nil, bs_address[0])
-    
-}
 
 // RPC messages and RPC send manager: 
 
-func (network *Network) SendRPC(rpcMessageType RPCMessage, connection *net.UDPConn, address *net.UDPAddr){
+func (network *Network) SendRPC(rpcMessageType RPCMessage, connection *net.UDPConn){
     switch rpcMessageType{
     case Ping:
         // Send Ping RPC call to a specific node
+        msg_ping := network.SendPingMessage(&network.kademliaNodes.node_contact.me, Ping)
+        _, errs := connection.Write(msg_ping)
+        if errs != nil {
+            fmt.Println("Error sending msg: ", errs)
+        }
     case Store:
         // Send Store RPC package
     case FindNode: 
         // Send FIND_NODE RPC package to specific node
+        //connection.Write("SEND ME YOUR CONTACT")
     case FindValue:
         // Send FIND_VALUE RPC package to specific node client
     default:
@@ -179,10 +214,31 @@ func (network *Network) SendRPC(rpcMessageType RPCMessage, connection *net.UDPCo
 
 }
 
+// This function is to handle RPC messages from the receiver side
+func (network *Network) HandleRPC(){
+   
+
+
+}
+
 // TODO receiver method for handling received UDP messages
 
-func (network *Network) SendPingMessage(contact *Contact) {
+func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessage) []byte {
 	// TODO
+    //"GET_CONTACT_FROM_BN"
+    //SERALIZE (CONTACT) ---> NODE THAT WANTS TO JOIN! 
+    //msg_ping := []byte(Ping)
+    new_msg := CreateNewMessage(contact, msgType)
+    
+    json_msg, err := json.Marshal(new_msg)
+    if err != nil {
+        return json_msg
+    }
+    fmt.Printf("Message to send: %v", json_msg)
+    return json_msg
+
+
+    
 }
 
 func (network *Network) SendFindContactMessage(contact *Contact) {
@@ -190,9 +246,11 @@ func (network *Network) SendFindContactMessage(contact *Contact) {
     
     // NOTE: Whenever a node receives a communication from another, it updates the corresponding bucket.
     // If the contact already exists, it is moved to the end of the bucket.
-    // If bucket is not full, the new contact is added at the end.
-    //network.kademliaNodes.node_contact.AddContact(*contact)
-    // Bootstrap node logic for initializing contact to the network
+   
+    //1. Send byte of string to contact the boot node
+
+    //2. The boot nodes contact is sent as response to calling node
+    //network.kademliaNodes.node_contact.AddContact()
 
 }
 
