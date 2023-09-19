@@ -18,7 +18,6 @@ func main(){
     kademliaNetwork := src.InitNodeNetwork()
     go kademliaNetwork.InvokeServer()
     
-    kademliaNetwork.ShowNodeStatus()
     //kademliaNetwork.BootstrapConnect()
     kademliaNetwork.ListenJoin()
 

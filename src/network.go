@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+    "bytes"
 )
 
 
@@ -25,17 +26,17 @@ const (
 )
 
 type MessageContactBuilder struct {
-    msg RPCMessage
-    contact *Contact
+    Msg RPCMessage `json:"msg"` 
+    ContactID string `json:"contact"`
+    ContactAddress string `json:"address"`
 }
 
 func CreateNewMessage(contact *Contact, msgType RPCMessage) MessageContactBuilder {
-
-    msgBuilder := MessageContactBuilder{
-        msg: msgType,
-        contact: contact,
-    }
-    return msgBuilder
+    buildContact := MessageContactBuilder{}
+    buildContact.ContactID = contact.ID.String()
+    buildContact.ContactAddress = contact.Address
+    buildContact.Msg = msgType
+    return buildContact
 }
 
 // Get preferred outbound ip of this machine - retreving the local (source) address 
@@ -105,19 +106,6 @@ func InitNodeNetwork() Network{
 
 } 
 
-// Server side - handle receving incoming messages
-func HandleConnection(connection net.Conn) {
-    buf := make([]byte,1024)
-    len,err := connection.Read(buf)
-    if err!= nil{
-        fmt.Printf("Error reading %#v\n",err)
-        return
-    }
-    fmt.Printf("Message received %s\n",string(buf[:len]))
-    connection.Write([]byte("Message received\n"))
-    connection.Close()
-}
-
 func FetchEnvVar(envvar string) (bootNodevar int) {
     envVar:=os.Getenv(envvar)
     bootNodevar,err := strconv.Atoi(envVar)
@@ -128,7 +116,6 @@ func FetchEnvVar(envvar string) (bootNodevar int) {
 }
 
 func BootnodeConnect(boot_addr *net.UDPAddr) (*net.UDPConn, error){
-
     // 1. Connect to boot node 
     conn, err := net.DialUDP("udp", nil ,boot_addr)
     if err != nil {
@@ -158,25 +145,9 @@ func (network *Network) ListenJoin() {
         network.SendRPC(Ping, conn)
 
         defer conn.Close()
-
-        /*
-        msg_test := []byte("hello boot node!")
-        _, errs := conn.Write(msg_test)
-        if errs != nil {
-            fmt.Println("Error sending msg:", errs)
-            return 
-        }
-        */
     }
 
 }
-
-
-func (network *Network) ShowNodeStatus(){
-    // method for showing node status and its data state
-    println(network.kademliaNodes.node_contact.me.String())
-}
-
 
 // RPC messages and RPC send manager: 
 
@@ -184,7 +155,8 @@ func (network *Network) SendRPC(rpcMessageType RPCMessage, connection *net.UDPCo
     switch rpcMessageType{
     case Ping:
         // Send Ping RPC call to a specific node
-        msg_ping := network.SendPingMessage(&network.kademliaNodes.node_contact.me, Ping)
+        contact := network.kademliaNodes.node_contact.me
+        msg_ping := network.SendPingMessage(&contact, Ping)
         _, errs := connection.Write(msg_ping)
         if errs != nil {
             fmt.Println("Error sending msg: ", errs)
@@ -204,26 +176,25 @@ func (network *Network) SendRPC(rpcMessageType RPCMessage, connection *net.UDPCo
 
 // This function is to handle RPC messages from the receiver side
 func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
-    switch returned_msg.msg{
-        case Ping:
-        case Pong:
-        case Store:
-        case FindNode:
-        case FindValue:
-    }
-    n, client, err := connection.ReadFromUDP(buffer)
+
+    _, client, err := connection.ReadFromUDP(buffer)
         if err != nil {
             //return err 
             fmt.Println(err)
         }
-        returned_msg := MessageContactBuilder{}
-
-        decoded_json_err := json.Unmarshal(buffer[:n], &returned_msg)
+        var returned_msg MessageContactBuilder
+        buffer_result := bytes.Trim(buffer, "\x00")
+        decoded_json_err := json.Unmarshal(buffer_result, &returned_msg)
         if decoded_json_err != nil {
             fmt.Println(decoded_json_err)
         }
+
+        //switch returned_msg.msg{    
+        //}
+        
         //fmt.Printf("received %s from %s \n", string(buffer[:n]), client)
-        fmt.Printf("Received: %+v from %s: ", returned_msg, client) 
+
+        fmt.Printf("Received: %#v from %s: ", returned_msg, client) 
 }
 
 // TODO receiver method for handling received UDP messages
@@ -234,12 +205,18 @@ func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessage) []
     //SERALIZE (CONTACT) ---> NODE THAT WANTS TO JOIN! 
     //msg_ping := []byte(Ping)
     new_msg := CreateNewMessage(contact, msgType)
+
+    //msg := MessageContactBuilder{
+    //    ContactID:,
+    //    Msg: msgType,
+    //}
     
     json_msg, err := json.Marshal(new_msg)
+
     if err != nil {
         return json_msg
     }
-    fmt.Printf("Message to send: %v", json_msg)
+    fmt.Printf("Message to send: %s\n", string(json_msg))
     return json_msg
 
 
