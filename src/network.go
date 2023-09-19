@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+    "bytes"
 )
 
 
@@ -26,12 +27,15 @@ const (
 
 type MessageContactBuilder struct {
     Msg RPCMessage `json:"msg"` 
-    Contact Contact `json:"contact"`
+    ContactID string `json:"contact"`
+    ContactAddress string `json:"address"`
+
 }
 
 func CreateNewMessage(contact *Contact, msgType RPCMessage) MessageContactBuilder {
     buildContact := MessageContactBuilder{}
-    buildContact.Contact = *contact
+    buildContact.ContactID = contact.ID.String()
+    buildContact.ContactAddress = contact.Address
     buildContact.Msg = msgType
     return buildContact
 }
@@ -179,9 +183,9 @@ func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
             //return err 
             fmt.Println(err)
         }
-        returned_msg := MessageContactBuilder{}
-        
-        decoded_json_err := json.Unmarshal(buffer, &returned_msg)
+        var returned_msg MessageContactBuilder
+        buffer_result := bytes.Trim(buffer,"\x00")
+        decoded_json_err := json.Unmarshal(buffer_result, &returned_msg)
         if decoded_json_err != nil {
             fmt.Println(decoded_json_err)
         }
@@ -190,7 +194,7 @@ func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
         //}
         
         //fmt.Printf("received %s from %s \n", string(buffer[:n]), client)
-        fmt.Printf("Received: %+v from %s: ", returned_msg, client) 
+        fmt.Printf("Received: %#v from %s: ", returned_msg, client) 
 }
 
 // TODO receiver method for handling received UDP messages
@@ -200,14 +204,12 @@ func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessage) []
     //"GET_CONTACT_FROM_BN"
     //SERALIZE (CONTACT) ---> NODE THAT WANTS TO JOIN! 
     //msg_ping := []byte(Ping)
-    //new_msg := CreateNewMessage(contact, msgType)
+    new_msg := CreateNewMessage(contact, msgType)
 
-    msg := MessageContactBuilder{
-        Contact: *contact,
-        Msg: msgType,
-    }
+
+    fmt.Println("new message contact was created: ",new_msg.ContactID)
     
-    json_msg, err := json.Marshal(msg)
+    json_msg, err := json.Marshal(new_msg)
 
     if err != nil {
         return json_msg
