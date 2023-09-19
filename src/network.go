@@ -184,7 +184,13 @@ func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
         if decoded_json_err != nil {
             fmt.Println(decoded_json_err)
         }
-        fmt.Printf("Received: %#v", returned_msg) 
+        if returned_msg.Msg == "PING"{
+            fmt.Printf("Received: %#v", returned_msg) 
+        } else if returned_msg.Msg == "PONG"{
+            msg_type := returned_msg.Msg
+            msg_address := returned_msg.ContactAddress
+            fmt.Printf("Received: %#v from: %s", msg_type, msg_address) 
+        }
 
         switch returned_msg.Msg{
         case Ping:
@@ -207,12 +213,7 @@ func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
 
 func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessage) []byte {
 	// TODO
-    //"GET_CONTACT_FROM_BN"
-    //SERALIZE (CONTACT) ---> NODE THAT WANTS TO JOIN! 
-    //msg_ping := []byte(Ping)
     new_msg := CreateNewMessage(contact, msgType)
-    fmt.Println("new message contact was created: ",new_msg.ContactID)
-    
     json_msg, err := json.Marshal(new_msg)
 
     if err != nil {
