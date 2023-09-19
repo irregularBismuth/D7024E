@@ -29,6 +29,10 @@ type MessageContactBuilder struct {
     Msg RPCMessage `json:"msg"` 
     ContactID string `json:"contact"`
     ContactAddress string `json:"address"`
+<<<<<<< HEAD
+=======
+
+>>>>>>> dbc65820a0225362cf251ee3a31d1da333a995c0
 }
 
 func CreateNewMessage(contact *Contact, msgType RPCMessage) MessageContactBuilder {
@@ -183,7 +187,11 @@ func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
             fmt.Println(err)
         }
         var returned_msg MessageContactBuilder
+<<<<<<< HEAD
         buffer_result := bytes.Trim(buffer, "\x00")
+=======
+        buffer_result := bytes.Trim(buffer,"\x00")
+>>>>>>> dbc65820a0225362cf251ee3a31d1da333a995c0
         decoded_json_err := json.Unmarshal(buffer_result, &returned_msg)
         if decoded_json_err != nil {
             fmt.Println(decoded_json_err)
@@ -193,7 +201,10 @@ func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
         //}
         
         //fmt.Printf("received %s from %s \n", string(buffer[:n]), client)
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbc65820a0225362cf251ee3a31d1da333a995c0
         fmt.Printf("Received: %#v from %s: ", returned_msg, client) 
 }
 
@@ -206,10 +217,15 @@ func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessage) []
     //msg_ping := []byte(Ping)
     new_msg := CreateNewMessage(contact, msgType)
 
+<<<<<<< HEAD
     //msg := MessageContactBuilder{
     //    ContactID:,
     //    Msg: msgType,
     //}
+=======
+
+    fmt.Println("new message contact was created: ",new_msg.ContactID)
+>>>>>>> dbc65820a0225362cf251ee3a31d1da333a995c0
     
     json_msg, err := json.Marshal(new_msg)
 

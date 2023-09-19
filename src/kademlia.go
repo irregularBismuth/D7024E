@@ -1,7 +1,7 @@
 package src
 
-import ( 
-    "net"
+import (
+	"net"
 )
 
 // Kademlia nodes store contact information about each other <IP, UDP port, Node ID>
@@ -14,7 +14,7 @@ func InitNode(address net.Addr) Kademlia {
     var id_node *KademliaID = NewRandomKademliaID()
     var new_contact Contact = NewContact(id_node, address.String())
     var routing_table RoutingTable = *NewRoutingTable(new_contact)
-    
+    //fmt.Println("New node was created with ID: ",id_node.String()) 
     return Kademlia{
         node_contact: routing_table,
         data: make(map[string]string),
