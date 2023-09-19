@@ -204,7 +204,13 @@ func (network *Network) SendRPC(rpcMessageType RPCMessage, connection *net.UDPCo
 
 // This function is to handle RPC messages from the receiver side
 func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
-
+    switch returned_msg.msg{
+        case Ping:
+        case Pong:
+        case Store:
+        case FindNode:
+        case FindValue:
+    }
     n, client, err := connection.ReadFromUDP(buffer)
         if err != nil {
             //return err 
