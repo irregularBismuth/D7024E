@@ -72,19 +72,7 @@ func (network *Network) InvokeServer() error{
     // Need to add logic for incoming and outgoing packets handling - channels?
     buffer := make([]byte, 1024)
     for {
-        n, client, err := udp_connection.ReadFromUDP(buffer)
-        if err != nil {
-            return err 
-        }
-        returned_msg := MessageContactBuilder{}
-
-        decoded_json_err := json.Unmarshal(buffer[:n], &returned_msg)
-        if decoded_json_err != nil {
-            fmt.Println(decoded_json_err)
-        }
-        //fmt.Printf("received %s from %s \n", string(buffer[:n]), client)
-        fmt.Printf("Received: %+v from %s: ", returned_msg, client)
-        //udp_connection.WriteToUDP()
+        network.HandleRPC(udp_connection, buffer)
     }
 }
 
@@ -215,10 +203,21 @@ func (network *Network) SendRPC(rpcMessageType RPCMessage, connection *net.UDPCo
 }
 
 // This function is to handle RPC messages from the receiver side
-func (network *Network) HandleRPC(){
-   
+func (network *Network) HandleRPC(connection *net.UDPConn, buffer []byte){
 
+    n, client, err := connection.ReadFromUDP(buffer)
+        if err != nil {
+            //return err 
+            fmt.Println(err)
+        }
+        returned_msg := MessageContactBuilder{}
 
+        decoded_json_err := json.Unmarshal(buffer[:n], &returned_msg)
+        if decoded_json_err != nil {
+            fmt.Println(decoded_json_err)
+        }
+        //fmt.Printf("received %s from %s \n", string(buffer[:n]), client)
+        fmt.Printf("Received: %+v from %s: ", returned_msg, client) 
 }
 
 // TODO receiver method for handling received UDP messages
