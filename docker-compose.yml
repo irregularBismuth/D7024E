@@ -43,6 +43,8 @@ services:
 
   kademliaNodes:
     image: shakira:latest # Make sure your Docker image has this name.
+    depends_on:
+      - bootNode
     stdin_open: true
     tty: true
     environment: 
