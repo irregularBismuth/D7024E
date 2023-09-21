@@ -7,7 +7,6 @@ import (
     "time"
 )
 
-
 func init() { rand.Seed(time.Now().UTC().UnixNano())}
 
 func main(){
@@ -17,20 +16,8 @@ func main(){
     //kademliaNode:=src.InitNode(src.GetOutboundIP())
     kademliaNetwork := src.InitNodeNetwork()
     go kademliaNetwork.InvokeServer()
-    
+    src.RunCLI()
     //kademliaNetwork.BootstrapConnect()
-    kademliaNetwork.ListenJoin()
-
- /*   var id = src.NewRandomKademliaID() 
-    a:=src.NewContact(id,GetOutboundIP().String());
-    
-    fmt.Println("This is random Node: ", id)
-        
-   // fmt.Println("BN : ",os.Getenv("BN"))
-    fmt.Println(a.Address);
-    src.Listen("localhost",8888)
-    fmt.Println("132 3212")*/
-
-
+   // go kademliaNetwork.ListenJoin()
     for {}
 }
