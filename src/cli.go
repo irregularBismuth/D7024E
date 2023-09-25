@@ -30,6 +30,13 @@ func FindCommands(cmd string){
 
 
 func RunCLI() {
+    
+    scanner := bufio.NewScanner(os.Stdin)
+    for scanner.Scan() {
+        line := scanner.Text()
+        fmt.Println("Read line:", line)
+    }
+
     reader := bufio.NewReader(os.Stdin)
     fmt.Println("Enter CLI: via Docker attach Node")
     for{
