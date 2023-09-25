@@ -13,7 +13,7 @@ import (
 
 
 type Network struct {
-    kademliaNodes *Kademlia
+    node *Kademlia
     srv *UdpSocket
 }
 
@@ -27,10 +27,16 @@ const (
     JoinNetwork RPCMessageTypes = "JOIN_NETWORK"
 )
 
+type ResponseData struct {
+    Contacts []Contact `json:"contacts"`
+    Contact Contact `json:"contact"`
+    StringMessage string `json:"stringMessage"`
+}
+
 type RPCMessageBuilder struct {
     Msg RPCMessageTypes `json:"msg"` 
     Contact Contact `json:"contact"` // Source contact 
-    ResponseData interface{} `json:"responseData"` //empty interface may hold values of any type
+    ResponseData ResponseData `json:"responseData"` //empty interface may hold values of any type
     Destination *net.UDPAddr `json:"destination"` // Destination address or what address to send the ResponseData too.
     IsRequest bool `json:"isRequest"`
 }
@@ -40,6 +46,7 @@ type UdpSocket struct {
     socketConnection *net.UDPConn
     serverAddress *net.UDPAddr
     response_channel chan RPCMessageBuilder
+    
 }
 
 func NewUdpSocket(addr *net.UDPAddr) (UdpSocket){
@@ -48,12 +55,12 @@ func NewUdpSocket(addr *net.UDPAddr) (UdpSocket){
     if err != nil {
         fmt.Println(err) 
     }
-    fmt.Printf("udp_connection established: %v\n", conn.LocalAddr().String())
+    fmt.Printf(" Node network UDP connection established at: %v\n", conn.LocalAddr().String())
 
     return UdpSocket{
         socketConnection: conn,
         serverAddress: addr,
-        response_channel: make(chan RPCMessageBuilder, 10),
+        response_channel: make(chan RPCMessageBuilder),
     }
 }
 
@@ -64,6 +71,7 @@ func CreateNewMessage(contact *Contact, msgType RPCMessageTypes, isRequest bool)
     }
     message := RPCMessageBuilder{}
     message.Contact = *contact
+    message.ResponseData = ResponseData{}
     message.Msg = msgType
     message.Destination = destination_addr
     message.IsRequest = isRequest
@@ -117,7 +125,7 @@ func InitNodeNetwork() Network{
 
     // Create new network object struct containing its node and UDPAddr data
     new_network := Network{
-        kademliaNodes: &new_node,
+        node: &new_node,
         srv: &new_udpsocket,
     }
     return new_network
@@ -155,9 +163,20 @@ func (network *Network) BootstrapJoinProcess(){
     // known bootstrap node connection
     boot_addr, _ := GetBootnodeAddr() 
     conn, _ := BootnodeConnect(boot_addr)
-    contact := network.kademliaNodes.node_contact.me
-    network.SendRPC(FindNode, &contact, conn)
+    contact := network.node.node_contact.me
     
+    // 1. Add contact 
+    response_contact := network.SendRPC(JoinNetwork, &contact, conn)
+    network.node.node_contact.AddContact(response_contact.Contact)
+    fmt.Println("(1) Added the contact: ",response_contact.Contact)
+    // 2. Node lookup on itself 
+    //self_contact := network.node.node_contact.me
+    //resulting_lookup_contacts := network.node.LookupContact(network, &self_contact)
+    //fmt.Println("Lookup result: ", resulting_lookup_contacts)
+    
+    //k_closest_response := network.SendRPC(FindNode, &contact, conn)
+    //fmt.Println("FIND_NODE response: ", k_closest_response)
+     
     // Initialize new node that should join the network
     // 1. If it does not already have a NodeID N, it generates one
     // 2. It inserts the value of some known node C into appropriate bucket as its first contact
@@ -171,23 +190,28 @@ func (network *Network) JoinNetwork() {
 	// TODO 
     bootNodevar := FetchEnvVar("BN")
     if bootNodevar == 1 {
-        println("Initialiazing network - Creating bootnode!")
+        println("Initialiazing network - Creating bootnode!\n")
     } else if bootNodevar == 0 {
-        println("This is not a boot node - Starting bootstraping join process!")
+        println("Starting bootstraping join process!\n")
         network.BootstrapJoinProcess()
-        //network.SendRPC(Ping, conn)
+
+        // RPC tests here:
+        boot_addr, _ := GetBootnodeAddr() 
+        conn, _ := BootnodeConnect(boot_addr)
+        contact := network.node.node_contact.me
+        network.SendRPC(Ping, &contact, conn)
     }
 
 }
 
-func (network *Network) SendRPC(rpcMessageType RPCMessageTypes, contact *Contact, connection *net.UDPConn){
+func (network *Network) SendRPC(rpcMessageType RPCMessageTypes, contact *Contact, connection *net.UDPConn) (*ResponseData){
     switch rpcMessageType{
     case Ping:
         // Send Ping RPC call to a specific node
         //contact := network.kademliaNodes.node_contact.me
         msg_ping := network.SendPingMessage(contact, Ping)
         network.SendRequestMessage(connection, msg_ping)
-        
+
     case Store:
         // Send Store RPC package
     case FindNode: 
@@ -206,6 +230,12 @@ func (network *Network) SendRPC(rpcMessageType RPCMessageTypes, contact *Contact
         fmt.Println("Unknown RPC message type!")
     }
 
+    response_msg, ok := <-network.srv.response_channel
+    if !ok {
+        fmt.Println("Error fetching response from channel!")
+    }
+    response_payload := network.ResponseRPCHandler(response_msg) // handle response msg and convert to payload
+    return response_payload
 }
 
 // This function is to handle RPC messages from the receiver side
@@ -218,7 +248,6 @@ func (network *Network) RequestRPCHandler(buffer []byte){
         fmt.Println(err)
     }
     var returned_msg RPCMessageBuilder //deseralized json to struct object
-
     buffer_result := bytes.Trim(buffer,"\x00")
     decoded_json_err := json.Unmarshal(buffer_result, &returned_msg) //deseralize json 
     if decoded_json_err != nil {
@@ -229,26 +258,30 @@ func (network *Network) RequestRPCHandler(buffer []byte){
        // Handle and assign the request response and where to send the response too:
         switch returned_msg.Msg{
         case Ping:
-            fmt.Printf("Received: %#v\n", returned_msg) 
-            contact := network.kademliaNodes.node_contact.me
-            //pong_json_msg := fmt.Sprintf(`{"Msg": "PONG", "Address": "%v"}`,contact)
-            returned_msg.Contact = contact
-            returned_msg.ResponseData = "PONG"
+            fmt.Printf("Received RPC request: %#v from: %s\n", returned_msg.Msg, returned_msg.Contact.Address) 
+            returned_msg.ResponseData.Contact = network.node.node_contact.me
+            
+            returned_msg.ResponseData.StringMessage = "PONG"
             returned_msg.IsRequest = false
             network.SendResponse(returned_msg)
 
         case FindNode:
-            fmt.Printf("Received: %#v\n", returned_msg) 
-            returned_msg.Contact = network.kademliaNodes.node_contact.me
-            //target_id := returned_msg.Contact.ID
-            //k_closest_nodes := network.kademliaNodes.node_contact.FindClosestContacts(target_id,3)
-            returned_msg.ResponseData = network.kademliaNodes.node_contact.me
+            fmt.Printf("Received RPC request: %#v from: %s\n", returned_msg.Msg, returned_msg.Contact.Address) 
+            target_id := returned_msg.Contact.ID
+            k_closest_nodes := network.node.node_contact.FindClosestContacts(target_id,3)
+            
+            returned_msg.ResponseData.Contact = network.node.node_contact.me   
+            returned_msg.ResponseData.Contacts = k_closest_nodes
             returned_msg.IsRequest = false
-            fmt.Println("Sending back my contact with KademliaID: ",returned_msg.Contact.ID.String())
             network.SendResponse(returned_msg)
         
         case JoinNetwork:
-            //
+            fmt.Printf("Received RPC request: %#v from: %s\n", returned_msg.Msg, returned_msg.Contact.Address) 
+            
+            returned_msg.ResponseData.Contact = network.node.node_contact.me
+            returned_msg.ResponseData.StringMessage = "Bootstrap joining!"
+            returned_msg.IsRequest = false
+            network.SendResponse(returned_msg)
         } 
     
     }else{
@@ -260,6 +293,9 @@ func (network *Network) RequestRPCHandler(buffer []byte){
 
 func (network *Network) SendResponse(response_msg RPCMessageBuilder){
     response_json, err := json.Marshal(response_msg)
+    dest_ip := response_msg.Destination.IP.String()
+    dest_port := response_msg.Destination.Port
+    fmt.Printf("Sending RPC response: %v to client: %s:%d \n",response_msg.ResponseData, dest_ip, dest_port)
     if err !=nil {
         fmt.Println("Error seralizing response message",err)
         return
@@ -268,25 +304,33 @@ func (network *Network) SendResponse(response_msg RPCMessageBuilder){
     connection.WriteTo(response_json, response_msg.Destination)
 }
 
+
 // Process channel in a gorotuine - Response message 
-func (network *Network) ResponseRPCHandler(msg RPCMessageBuilder){
-    
+func (network *Network) ResponseRPCHandler(msg RPCMessageBuilder) (*ResponseData) {
+    // Receives the RPC response by reading the response channel
+    // Should be able to return value for certain RPC calls...
     switch msg.Msg{
     case Ping:
         // Run ping logic 
-        fmt.Printf("Response data: %s, from: %v ",msg.ResponseData, msg.Contact.Address)
+        fmt.Printf("Response data: %v, from: %s\n",msg.ResponseData.StringMessage, msg.Contact.Address)
     
     case FindNode:
         // Run kademlia logic
-        fmt.Println("Response data: ", msg.ResponseData)
+        fmt.Printf("Response data: %v\n", msg.ResponseData.Contacts)
         recipent_contact := msg.Contact
-        fmt.Println("Received a contact with KademliaID: ",recipent_contact.ID.String())
-        network.kademliaNodes.node_contact.AddContact(recipent_contact)
+        fmt.Printf("Received k-closest contacts from KademliaID: %s\n",recipent_contact.ID.String())
     case FindValue:
         //
+
+    case JoinNetwork:
+        fmt.Printf("Response data: %v\n", msg.ResponseData)
+        fmt.Println("Steps to perform:\n 1. Add contact\n 2. Node lookup on itself\n 3. Refresh")
+
+        //3. refresh 
     }
-     
+    return &msg.ResponseData
 }
+
 
 func (network *Network) HandleResponseChannel(){
     for {
@@ -319,7 +363,7 @@ func (network *Network) JoinNetworkMessage(contact *Contact, msgType RPCMessageT
     if err != nil {
         return json_msg
     }
-    fmt.Printf("Message to send %s\n", string(json_msg))
+    fmt.Printf("RPC request message to send %s\n", string(json_msg))
     return json_msg
 }
 
@@ -332,7 +376,7 @@ func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessageType
     if err != nil {
         return json_msg
     }
-    fmt.Printf("Message to send: %s\n", string(json_msg))
+    fmt.Printf("RPC request message to send: %s\n", string(json_msg))
     return json_msg
     
 }
@@ -353,7 +397,7 @@ func (network *Network) SendFindContactMessage(contact *Contact) []byte {
     if err != nil {
         return json_msg
     }
-    fmt.Printf("Message to send: %s\n", string(json_msg))
+    fmt.Printf("RPC request message to send: %s\n", string(json_msg))
     return json_msg
 }
 
