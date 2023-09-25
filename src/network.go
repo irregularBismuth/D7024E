@@ -259,7 +259,7 @@ func (network *Network) RequestRPCHandler(buffer []byte){
 
             conn, _ := BootnodeConnect(response_addr)
             conn.Write(pong_msg_response)
-        }
+        
         case FindNode:
             fmt.Printf("Received: %#v\n", returned_msg) 
             returned_msg.Contact = network.kademliaNodes.node_contact.me
@@ -268,9 +268,8 @@ func (network *Network) RequestRPCHandler(buffer []byte){
             returned_msg.ResponseData = network.kademliaNodes.node_contact.me
             returned_msg.IsRequest = false
             fmt.Println("Sending back my contact with KademliaID: ",returned_msg.Contact.ID.String())
-            network.SendResponse(returned_msg)
+            network.SendResponse(returned_msg) 
         } 
-    
     }else{
         // Process handler for message as a response by adding response message to the channel
         network.srv.response_channel<-returned_msg
@@ -370,6 +369,8 @@ func (network *Network) SendFindDataMessage(hash string) {
 	// TODO
 }
 
-func (network *Network) SendStoreMessage(data []byte) {
-	// TODO
+func (network *Network) SendStoreMessage(data string) string{
+	fmt.Println("reached SendStoreMessage")
+    message := kademlia.Store(data)
+    return ("stored the message: " + message)
 }

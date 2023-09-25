@@ -1,8 +1,10 @@
 package src
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"net"
-    "fmt"
 )
 
 // Kademlia nodes store contact information about each other <IP, UDP port, Node ID>
@@ -49,6 +51,24 @@ func (kademlia *Kademlia) LookupData(hash string) {
 	// TODO
 }
 
-func (kademlia *Kademlia) Store(data []byte) {
-	// TODO
+func (kademlia *Kademlia) Store(data string) {
+	// Calculate hash (key) for our value (data)
+    fmt.Println("Reached Store")
+    hash := kademlia.dataHash(data)
+
+    // Save the key, value pair to our node
+    kademlia.data[hash] = data
+    fmt.Println("Stored %s in self: ", data)
+}
+
+func (kademlia *Kademlia) dataHash(data string) (string) {
+    // Create a key value for the string
+    hasher := sha256.New()
+    hasher.Write([]byte(data))
+    hashBytes := hasher.Sum(nil)
+
+    // Convert the hash to hexadecimal string
+    hash := hex.EncodeToString(hashBytes)
+    fmt.Println("Reached dataHash")
+    return hash
 }
