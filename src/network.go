@@ -186,28 +186,21 @@ func (network *Network) SendRPC(rpcMessageType RPCMessageTypes, contact *Contact
         // Send Ping RPC call to a specific node
         //contact := network.kademliaNodes.node_contact.me
         msg_ping := network.SendPingMessage(contact, Ping)
-        fmt.Printf("This is the contact: %v",contact)
-        _, errs := connection.Write(msg_ping)
-        if errs != nil {
-            fmt.Println("Error sending msg: ", errs)
-        }
+        network.SendRequestMessage(connection, msg_ping)
+        
     case Store:
         // Send Store RPC package
     case FindNode: 
         // Send FIND_NODE RPC package to specific node
-        //sender_contact := network.kademliaNodes.node_contact.me
         msg_findnode := network.SendFindContactMessage(contact)
-        _, err := connection.Write(msg_findnode)
-        if err != nil {
-            fmt.Println("Error sending msg: ", err)
-        }
-        //connection.Write("SEND ME YOUR CONTACT")
+        network.SendRequestMessage(connection, msg_findnode)
+       
     case FindValue:
         // Send FIND_VALUE RPC package to specific node client
     
     case JoinNetwork:
         msg_join := network.JoinNetworkMessage(contact, JoinNetwork)
-
+        network.SendRequestMessage(connection, msg_join)
 
     default:
         fmt.Println("Unknown RPC message type!")
@@ -311,6 +304,12 @@ func (network *Network) HandleResponseChannel(){
     }
 }
 
+func (network *Network) SendRequestMessage(connection *net.UDPConn, msg []byte){
+     _, err := connection.Write(msg)
+    if err != nil {
+        fmt.Println("Error sending msg: ", err)
+    }
+}
 
 // TODO receiver method for handling received UDP messages
 func (network *Network) JoinNetworkMessage(contact *Contact, msgType RPCMessageTypes) []byte{
