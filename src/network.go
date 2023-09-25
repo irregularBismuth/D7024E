@@ -24,6 +24,7 @@ const (
     Store RPCMessageTypes = "STORE"
     FindNode RPCMessageTypes = "FIND_NODE"
     FindValue RPCMessageTypes = "FIND_VALUE"
+    JoinNetwork RPCMessageTypes = "JOIN_NETWORK"
 )
 
 type RPCMessageBuilder struct {
@@ -203,6 +204,11 @@ func (network *Network) SendRPC(rpcMessageType RPCMessageTypes, contact *Contact
         //connection.Write("SEND ME YOUR CONTACT")
     case FindValue:
         // Send FIND_VALUE RPC package to specific node client
+    
+    case JoinNetwork:
+        msg_join := network.JoinNetworkMessage(contact, JoinNetwork)
+
+
     default:
         fmt.Println("Unknown RPC message type!")
     }
@@ -247,6 +253,9 @@ func (network *Network) RequestRPCHandler(buffer []byte){
             returned_msg.IsRequest = false
             fmt.Println("Sending back my contact with KademliaID: ",returned_msg.Contact.ID.String())
             network.SendResponse(returned_msg)
+        
+        case JoinNetwork:
+            //
         } 
     
     }else{
@@ -304,6 +313,16 @@ func (network *Network) HandleResponseChannel(){
 
 
 // TODO receiver method for handling received UDP messages
+func (network *Network) JoinNetworkMessage(contact *Contact, msgType RPCMessageTypes) []byte{
+    isRequest := true
+    new_msg := CreateNewMessage(contact, msgType, isRequest)
+    json_msg, err := json.Marshal(new_msg)
+    if err != nil {
+        return json_msg
+    }
+    fmt.Printf("Message to send %s\n", string(json_msg))
+    return json_msg
+}
 
 func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessageTypes) []byte {
 	// TODO
