@@ -34,14 +34,10 @@ func RunCLI() {
     scanner := bufio.NewScanner(os.Stdin)
     for scanner.Scan() {
         line := scanner.Text()
-        fmt.Println("Read line:", line)
-    }
-
-    reader := bufio.NewReader(os.Stdin)
-    fmt.Println("Enter CLI: via Docker attach Node")
-    for{
-        input,_ := reader.ReadString('\n')
-        if(len(input) > 0){ FindCommands(input[:len(input)-1]) }
+        //fmt.Println(line)
+        fmt.Println("Enter CLI: via Docker attach Node")
+        //input,_ := reader.ReadString('\n')
+        if(len(line) > 0){ FindCommands(line[:len(line)-1]) }
     }
 }
 
