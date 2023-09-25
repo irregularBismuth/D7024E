@@ -16,10 +16,10 @@ func main(){
     
     //kademliaNode:=src.InitNode(src.GetOutboundIP())
     kademliaNetwork := src.InitNodeNetwork()
-    go kademliaNetwork.InvokeServer()
-    
+    go kademliaNetwork.ListenServer()
+    go kademliaNetwork.HandleResponseChannel() 
     //kademliaNetwork.BootstrapConnect()
-    kademliaNetwork.ListenJoin()
+    kademliaNetwork.JoinNetwork()
 
  /*   var id = src.NewRandomKademliaID() 
     a:=src.NewContact(id,GetOutboundIP().String());
