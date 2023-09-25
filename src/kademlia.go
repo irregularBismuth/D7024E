@@ -15,7 +15,11 @@ func InitNode(address net.Addr) Kademlia {
     var id_node *KademliaID = NewRandomKademliaID()
     var new_contact Contact = NewContact(id_node, address.String())
     var routing_table RoutingTable = *NewRoutingTable(new_contact)
+<<<<<<< HEAD
     fmt.Println("New node was created with Address: ",address.String()) 
+=======
+    fmt.Println("New node was created with ID: ",id_node.String()) 
+>>>>>>> bf87628ae14c1b1c921e773143154eb6233a96c6
     return Kademlia{
         node_contact: routing_table,
         data: make(map[string]string),

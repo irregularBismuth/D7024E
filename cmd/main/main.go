@@ -7,7 +7,6 @@ import (
     "time"
 )
 
-
 func init() { rand.Seed(time.Now().UTC().UnixNano())}
 
 func main(){
@@ -16,6 +15,7 @@ func main(){
     
     //kademliaNode:=src.InitNode(src.GetOutboundIP())
     kademliaNetwork := src.InitNodeNetwork()
+<<<<<<< HEAD
     go kademliaNetwork.ListenServer()
     go kademliaNetwork.HandleResponseChannel() 
     //kademliaNetwork.BootstrapConnect()
@@ -32,5 +32,11 @@ func main(){
     fmt.Println("132 3212")*/
 
 
+=======
+    go kademliaNetwork.InvokeServer()
+    src.RunCLI()
+    //kademliaNetwork.BootstrapConnect()
+   // go kademliaNetwork.ListenJoin()
+>>>>>>> bf87628ae14c1b1c921e773143154eb6233a96c6
     for {}
 }

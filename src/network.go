@@ -2,18 +2,26 @@ package src
 
 import (
 <<<<<<< HEAD
+<<<<<<< HEAD
     "net"
     "fmt"
 =======
 	"bytes"
+=======
+    "net"
+    "fmt"
+>>>>>>> bf87628ae14c1b1c921e773143154eb6233a96c6
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
+<<<<<<< HEAD
 	"time"
 >>>>>>> 05ab0b9adf2f078e3da722abc6cecef704a83ef3
+=======
+    "bytes"
+>>>>>>> bf87628ae14c1b1c921e773143154eb6233a96c6
 )
 
 
@@ -325,14 +333,26 @@ func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessageType
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> bf87628ae14c1b1c921e773143154eb6233a96c6
 func Listen(ip string, port int) {
 	// TODO
     fmt.Println("peepoepeopoeppeo")
     var udp = net.UDPAddr{
         IP: net.IP(ip),
         Port: port,
+<<<<<<< HEAD
 =======
 func (network *Network) SendFindContactMessage(contact *Contact) []byte {
+=======
+    }
+   // 
+    net.ListenUDP(ip, &udp)
+}
+
+func (network *Network) SendFindContactMessage(contact *Contact) {
+>>>>>>> bf87628ae14c1b1c921e773143154eb6233a96c6
 	// takes a 160-bit ID as an argument. 
     
     // NOTE: Whenever a node receives a communication from another, it updates the corresponding bucket.
