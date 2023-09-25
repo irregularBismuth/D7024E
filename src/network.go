@@ -1,11 +1,11 @@
 package src
 
 import (
+    "net"
+    "fmt"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
-	"net"
 	"os"
 	"strconv"
 	"time"
