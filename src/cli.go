@@ -15,9 +15,12 @@ func FindCommands(cmd string){
     //https://stackoverflow.com/questions/13737745/split-a-string-on-whitespace-in-go
     r:= regexp.MustCompile("[^\\s]+")
     w:=r.FindAllString(cmd,-1)
+
     for i,s := range w {
         w[i] = strings.ToLower(s)
     }
+
+
     if(w[0]=="help") {
         fmt.Println("List of available commands is : \n\n Put takes one argument object as UTF-8 format you want to store on the network e.g \n Put str123")
     } else if(w[0]=="put"){
