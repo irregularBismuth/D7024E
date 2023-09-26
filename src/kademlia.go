@@ -1,8 +1,10 @@
 package src
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"net"
-    "fmt"
 )
 
 // Kademlia nodes store contact information about each other <IP, UDP port, Node ID>
@@ -45,10 +47,38 @@ func (kademlia *Kademlia) LookupContact(target *Contact) {
 
 }
 
-func (kademlia *Kademlia) LookupData(hash string) {
-	// TODO
+func (kademlia *Kademlia) LookupData(data string) (string, bool){
+    hashValue := kademlia.dataHash(data)
+    originalWord, exists := kademlia.data[hashValue]
+    if exists{
+        fmt.Printf("The data you want exists: %s", originalWord)
+        fmt.Println("")
+    } else{
+        fmt.Println("Does not exist")
+    }
+    return originalWord, exists
 }
 
-func (kademlia *Kademlia) Store(data []byte) {
-	// TODO
+func (kademlia *Kademlia) Store(data string) (string) {
+	// Calculate the hash (key) for our value (data)
+    hash := kademlia.dataHash(data)
+
+    // Save the key value pair to node
+    kademlia.data[hash] = data
+    fmt.Println("Storing key value pair, DONE")
+    fmt.Println("Stored the hash: " + hash)
+    fmt.Println("Key value is: " + kademlia.data[hash])
+    return data
+}
+
+func (kademlia *Kademlia) dataHash(data string) (string) {
+    // Create the hash value
+    hasher := sha256.New()
+    hasher.Write([]byte(data))
+    hashBytes := hasher.Sum(nil)
+
+    // Convert the hash to hexadecmial string
+    hash := hex.EncodeToString(hashBytes)
+    fmt.Println("Hashing key DONE")
+    return hash
 }

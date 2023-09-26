@@ -2,6 +2,7 @@ package src
 
 import (
 	"bytes"
+	// "crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,6 +10,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	//"golang.org/x/text/message"
 )
 
 
@@ -361,6 +364,11 @@ func (network *Network) SendFindDataMessage(hash string) {
 	// TODO
 }
 
-func (network *Network) SendStoreMessage(data []byte) {
-	// TODO
+func (network *Network) SendStoreMessage(data string) {
+        network.kademliaNodes.Store(data)
+}
+
+func (network *Network) SendGetMessage(data string) {
+    fmt.Println("1. Reached Send GET message")
+    network.kademliaNodes.LookupData(data)
 }
