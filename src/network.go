@@ -17,15 +17,7 @@ type Network struct {
     srv *UdpSocket
 }
 
-type RPCMessageTypes string
 
-const (
-    Ping RPCMessageTypes = "PING"
-    Store RPCMessageTypes = "STORE"
-    FindNode RPCMessageTypes = "FIND_NODE"
-    FindValue RPCMessageTypes = "FIND_VALUE"
-    JoinNetwork RPCMessageTypes = "JOIN_NETWORK"
-)
 
 type ResponseData struct {
     Contacts []Contact `json:"contacts"`
@@ -34,7 +26,7 @@ type ResponseData struct {
 }
 
 type RPCMessageBuilder struct {
-    Msg RPCMessageTypes `json:"msg"` 
+    Msg RPCTypes `json:"msg"` 
     Contact Contact `json:"contact"` // Source contact 
     ResponseData ResponseData `json:"responseData"` //empty interface may hold values of any type
     Destination *net.UDPAddr `json:"destination"` // Destination address or what address to send the ResponseData too.
@@ -46,6 +38,7 @@ type UdpSocket struct {
     socketConnection *net.UDPConn
     serverAddress *net.UDPAddr
     response_channel chan RPCMessageBuilder
+    request_channel chan MessageBuilder
     
 }
 
@@ -61,10 +54,11 @@ func NewUdpSocket(addr *net.UDPAddr) (UdpSocket){
         socketConnection: conn,
         serverAddress: addr,
         response_channel: make(chan RPCMessageBuilder),
+        request_channel: make(chan MessageBuilder, 10),
     }
 }
 
-func CreateNewMessage(contact *Contact, msgType RPCMessageTypes, isRequest bool) RPCMessageBuilder {
+func CreateNewMessage(contact *Contact, msgType RPCTypes, isRequest bool) RPCMessageBuilder {
     destination_addr,err := net.ResolveUDPAddr("udp",contact.Address)
     if err != nil {
         fmt.Println(err)
@@ -174,15 +168,6 @@ func (network *Network) BootstrapJoinProcess(){
     //resulting_lookup_contacts := network.node.LookupContact(network, &self_contact)
     //fmt.Println("Lookup result: ", resulting_lookup_contacts)
     
-    //k_closest_response := network.SendRPC(FindNode, &contact, conn)
-    //fmt.Println("FIND_NODE response: ", k_closest_response)
-     
-    // Initialize new node that should join the network
-    // 1. If it does not already have a NodeID N, it generates one
-    // 2. It inserts the value of some known node C into appropriate bucket as its first contact
-    // 3. It performs an iterative FIND_NODE for N 
-    // 4. It refresh all buckets further away than its closes neighbor, which will be in the occupied bucket with the lowest index
-
 }
 
 // Should we return node object here or not? 
@@ -193,18 +178,18 @@ func (network *Network) JoinNetwork() {
         println("Initialiazing network - Creating bootnode!\n")
     } else if bootNodevar == 0 {
         println("Starting bootstraping join process!\n")
-        network.BootstrapJoinProcess()
+        go network.BootstrapJoinProcess()
 
         // RPC tests here:
         boot_addr, _ := GetBootnodeAddr() 
         conn, _ := BootnodeConnect(boot_addr)
         contact := network.node.node_contact.me
-        network.SendRPC(Ping, &contact, conn)
+        go network.SendRPC(Ping, &contact, conn)
     }
 
 }
 
-func (network *Network) SendRPC(rpcMessageType RPCMessageTypes, contact *Contact, connection *net.UDPConn) (*ResponseData){
+func (network *Network) SendRPC(rpcMessageType RPCTypes, contact *Contact, connection *net.UDPConn) (*ResponseData){
     switch rpcMessageType{
     case Ping:
         // Send Ping RPC call to a specific node
@@ -228,13 +213,17 @@ func (network *Network) SendRPC(rpcMessageType RPCMessageTypes, contact *Contact
 
     default:
         fmt.Println("Unknown RPC message type!")
+        return nil
     }
 
+    /*
     response_msg, ok := <-network.srv.response_channel
     if !ok {
         fmt.Println("Error fetching response from channel!")
     }
-    response_payload := network.ResponseRPCHandler(response_msg) // handle response msg and convert to payload
+    */
+    //response_payload := network.ResponseRPCHandler(response_msg) // handle response msg and convert to payload
+    response_payload := network.HandleResponseChannel()
     return response_payload
 }
 
@@ -331,21 +320,28 @@ func (network *Network) ResponseRPCHandler(msg RPCMessageBuilder) (*ResponseData
     return &msg.ResponseData
 }
 
+func (network *Network) HandleResponseChannel() *ResponseData {
+    responseChannel := make(chan *ResponseData)
 
-func (network *Network) HandleResponseChannel(){
-    for {
-        select{
-        case msg, ok := <-network.srv.response_channel:
-            if !ok {
-                fmt.Println("Channel closed")
-                return 
+    go func() {
+        for {
+            select {
+            case msg, ok := <-network.srv.response_channel:
+                if !ok {
+                    fmt.Println("Channel closed")
+                    responseChannel <- nil
+                    return
+                }
+                responsePayload := network.ResponseRPCHandler(msg)
+                responseChannel <- responsePayload
+            default:
+                time.Sleep(500 * time.Millisecond)
             }
-            //handle messages concurrently
-            go network.ResponseRPCHandler(msg)
-        default:
-            time.Sleep(100*time.Millisecond)
         }
-    }
+    }()
+
+    // Read the response payload from the channel
+    return <-responseChannel
 }
 
 func (network *Network) SendRequestMessage(connection *net.UDPConn, msg []byte){
@@ -356,7 +352,7 @@ func (network *Network) SendRequestMessage(connection *net.UDPConn, msg []byte){
 }
 
 // TODO receiver method for handling received UDP messages
-func (network *Network) JoinNetworkMessage(contact *Contact, msgType RPCMessageTypes) []byte{
+func (network *Network) JoinNetworkMessage(contact *Contact, msgType RPCTypes) []byte{
     isRequest := true
     new_msg := CreateNewMessage(contact, msgType, isRequest)
     json_msg, err := json.Marshal(new_msg)
@@ -367,7 +363,7 @@ func (network *Network) JoinNetworkMessage(contact *Contact, msgType RPCMessageT
     return json_msg
 }
 
-func (network *Network) SendPingMessage(contact *Contact, msgType RPCMessageTypes) []byte {
+func (network *Network) SendPingMessage(contact *Contact, msgType RPCTypes) []byte {
 	// TODO
     isRequest := true
     new_msg := CreateNewMessage(contact, msgType, isRequest)
