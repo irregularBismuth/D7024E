@@ -361,7 +361,7 @@ func (network *Network) SendFindContactMessage(contact *Contact) []byte {
 }
 
 func (network *Network) SendFindDataMessage(hash string) {
-	fmt.Println("1. Reached Send GET message")
+	//fmt.Println("1. Reached Send GET message")
     network.kademliaNodes.LookupData(hash)
 }
 

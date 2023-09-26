@@ -49,15 +49,15 @@ func (kademlia *Kademlia) LookupContact(target *Contact) {
 
 func (kademlia *Kademlia) LookupData(hash string) ([]byte, bool){
     // Take the sha1 encryption and check if it exists as a key
-    fmt.Println("1. Hash to look up: " + hash)
+    //fmt.Println("1. Hash to look up: " + hash)
     original, exists := kademlia.data[hash]
-    fmt.Printf("Original = %x", original)
+    //fmt.Printf("Original = %x", original)
     fmt.Println("")
     if exists{
-        fmt.Printf("2. The data you want exists: %s", original)
+        fmt.Printf("The data you want exists: %s", original)
         fmt.Println("")
     } else{
-        fmt.Println("2. Does not exist")
+        fmt.Println("The data does not exist")
     }
     return original, exists
 }
