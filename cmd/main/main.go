@@ -21,8 +21,8 @@ func main(){
     //kademliaNetwork.BootstrapConnect()
     kademliaNetwork.JoinNetwork()
 
-    kademliaNetwork.SendStoreMessage("Hello World")
-    kademliaNetwork.SendGetMessage("Hello World")
+    //kademliaNetwork.SendStoreMessage("test")
+    //kademliaNetwork.SendFindDataMessage("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
 
  /*   var id = src.NewRandomKademliaID() 
     a:=src.NewContact(id,GetOutboundIP().String());

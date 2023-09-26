@@ -361,14 +361,16 @@ func (network *Network) SendFindContactMessage(contact *Contact) []byte {
 }
 
 func (network *Network) SendFindDataMessage(hash string) {
-	// TODO
+	fmt.Println("1. Reached Send GET message")
+    network.kademliaNodes.LookupData(hash)
 }
 
 func (network *Network) SendStoreMessage(data string) {
-        network.kademliaNodes.Store(data)
+    byteString := []byte(data)    
+    network.kademliaNodes.Store(byteString)
 }
 
-func (network *Network) SendGetMessage(data string) {
-    fmt.Println("1. Reached Send GET message")
-    network.kademliaNodes.LookupData(data)
-}
+//func (network *Network) SendGetMessage(hash string) {
+//    //fmt.Println("1. Reached Send GET message")
+//    network.kademliaNodes.LookupData(hash)
+//}
