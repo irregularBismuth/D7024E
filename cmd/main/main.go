@@ -18,10 +18,22 @@ func main(){
     go kademliaNetwork.ListenServer()
     go kademliaNetwork.HandleResponseChannel() 
     //kademliaNetwork.BootstrapConnect()
-    kademliaNetwork.JoinNetwork()
-
-    src.RunCLI()
+    src.RunCLI(&kademliaNetwork)
     //kademliaNetwork.BootstrapConnect()
    // go kademliaNetwork.ListenJoin()
+    //kademliaNetwork.SendStoreMessage("test")
+    //kademliaNetwork.SendFindDataMessage("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
+
+ /*   var id = src.NewRandomKademliaID() 
+    a:=src.NewContact(id,GetOutboundIP().String());
+    
+    fmt.Println("This is random Node: ", id)
+        
+   // fmt.Println("BN : ",os.Getenv("BN"))
+    fmt.Println(a.Address);
+    src.Listen("localhost",8888)
+    fmt.Println("132 3212")*/
+
+
     for {}
 }
