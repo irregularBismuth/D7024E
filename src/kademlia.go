@@ -40,7 +40,8 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
         
         // call RPC for FIND_NODE here
         // FIND NODE = k-closest = []Contacts
-        response := node_network.SendRPC(FindNode, &contact, node_network.srv.socketConnection)
+        target_addr,_ := net.ResolveUDPAddr("udp", contact.Address)
+        response := node_network.FetchRPCResponse(FindNode,"lookup_rpc_id",&contact, target_addr)
         fmt.Println("FIND NODE response: ",response.Contacts)
         
     }

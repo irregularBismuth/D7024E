@@ -1,14 +1,14 @@
 package src
 
 import (
-	"bytes"
-	"encoding/json"
+	//"bytes"
+	//"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
-	"time"
+	//"time"
 )
 
 
@@ -17,27 +17,11 @@ type Network struct {
     srv *UdpSocket
 }
 
-
-
-type ResponseData struct {
-    Contacts []Contact `json:"contacts"`
-    Contact Contact `json:"contact"`
-    StringMessage string `json:"stringMessage"`
-}
-
-type RPCMessageBuilder struct {
-    Msg RPCTypes `json:"msg"` 
-    Contact Contact `json:"contact"` // Source contact 
-    ResponseData ResponseData `json:"responseData"` //empty interface may hold values of any type
-    Destination *net.UDPAddr `json:"destination"` // Destination address or what address to send the ResponseData too.
-    IsRequest bool `json:"isRequest"`
-}
-
 // Should act as a thread safe communication channel
 type UdpSocket struct {
     socketConnection *net.UDPConn
     serverAddress *net.UDPAddr
-    response_channel chan RPCMessageBuilder
+    response_channel chan PayloadData
     request_channel chan MessageBuilder
     
 }
@@ -53,23 +37,9 @@ func NewUdpSocket(addr *net.UDPAddr) (UdpSocket){
     return UdpSocket{
         socketConnection: conn,
         serverAddress: addr,
-        response_channel: make(chan RPCMessageBuilder),
+        response_channel: make(chan PayloadData, 10),
         request_channel: make(chan MessageBuilder, 10),
     }
-}
-
-func CreateNewMessage(contact *Contact, msgType RPCTypes, isRequest bool) RPCMessageBuilder {
-    destination_addr,err := net.ResolveUDPAddr("udp",contact.Address)
-    if err != nil {
-        fmt.Println(err)
-    }
-    message := RPCMessageBuilder{}
-    message.Contact = *contact
-    message.ResponseData = ResponseData{}
-    message.Msg = msgType
-    message.Destination = destination_addr
-    message.IsRequest = isRequest
-    return message
 }
 
 // Get preferred outbound ip of this machine - retreving the local (source) address 
@@ -95,7 +65,8 @@ func (network *Network) ListenServer() error{
     // Need to add logic for incoming and outgoing packets handling - channels?
     buffer := make([]byte, 1024)
     for {
-        network.RequestRPCHandler(buffer)
+        //network.RequestRPCHandler(buffer)
+        network.RequestResponseWorker(buffer)
     }
 }
 
@@ -156,13 +127,14 @@ func GetBootnodeAddr() (*net.UDPAddr, error){
 func (network *Network) BootstrapJoinProcess(){
     // known bootstrap node connection
     boot_addr, _ := GetBootnodeAddr() 
-    conn, _ := BootnodeConnect(boot_addr)
+    //conn, _ := BootnodeConnect(boot_addr)
     contact := network.node.node_contact.me
     
     // 1. Add contact 
-    response_contact := network.SendRPC(JoinNetwork, &contact, conn)
-    network.node.node_contact.AddContact(response_contact.Contact)
-    fmt.Println("(1) Added the contact: ",response_contact.Contact)
+    //response_contact := network.SendRPC(JoinNetwork, &contact, conn)
+    rpc_response := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &contact, boot_addr) 
+    network.node.node_contact.AddContact(rpc_response.Contact)
+    fmt.Println("(1) Added the contact: ",rpc_response.Contact)
     // 2. Node lookup on itself 
     //self_contact := network.node.node_contact.me
     //resulting_lookup_contacts := network.node.LookupContact(network, &self_contact)
@@ -178,56 +150,21 @@ func (network *Network) JoinNetwork() {
         println("Initialiazing network - Creating bootnode!\n")
     } else if bootNodevar == 0 {
         println("Starting bootstraping join process!\n")
-        go network.BootstrapJoinProcess()
+        network.BootstrapJoinProcess()
 
         // RPC tests here:
         boot_addr, _ := GetBootnodeAddr() 
-        conn, _ := BootnodeConnect(boot_addr)
+        //conn, _ := BootnodeConnect(boot_addr)
         contact := network.node.node_contact.me
-        go network.SendRPC(Ping, &contact, conn)
+        rpc_response := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr) 
+        fmt.Println("Controll response received: ", rpc_response.StringMessage) 
+        //go network.SendRPC(Ping, &contact, conn)
     }
 
-}
-
-func (network *Network) SendRPC(rpcMessageType RPCTypes, contact *Contact, connection *net.UDPConn) (*ResponseData){
-    switch rpcMessageType{
-    case Ping:
-        // Send Ping RPC call to a specific node
-        //contact := network.kademliaNodes.node_contact.me
-        msg_ping := network.SendPingMessage(contact, Ping)
-        network.SendRequestMessage(connection, msg_ping)
-
-    case Store:
-        // Send Store RPC package
-    case FindNode: 
-        // Send FIND_NODE RPC package to specific node
-        msg_findnode := network.SendFindContactMessage(contact)
-        network.SendRequestMessage(connection, msg_findnode)
-       
-    case FindValue:
-        // Send FIND_VALUE RPC package to specific node client
-    
-    case JoinNetwork:
-        msg_join := network.JoinNetworkMessage(contact, JoinNetwork)
-        network.SendRequestMessage(connection, msg_join)
-
-    default:
-        fmt.Println("Unknown RPC message type!")
-        return nil
-    }
-
-    /*
-    response_msg, ok := <-network.srv.response_channel
-    if !ok {
-        fmt.Println("Error fetching response from channel!")
-    }
-    */
-    //response_payload := network.ResponseRPCHandler(response_msg) // handle response msg and convert to payload
-    response_payload := network.HandleResponseChannel()
-    return response_payload
 }
 
 // This function is to handle RPC messages from the receiver side
+/*
 func (network *Network) RequestRPCHandler(buffer []byte){
 
     connection := network.srv.socketConnection // the request clients connection object
@@ -279,6 +216,7 @@ func (network *Network) RequestRPCHandler(buffer []byte){
     }
    
 }
+
 
 func (network *Network) SendResponse(response_msg RPCMessageBuilder){
     response_json, err := json.Marshal(response_msg)
@@ -404,3 +342,4 @@ func (network *Network) SendFindDataMessage(hash string) {
 func (network *Network) SendStoreMessage(data []byte) {
 	// TODO
 }
+*/
