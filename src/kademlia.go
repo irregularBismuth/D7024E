@@ -1,14 +1,16 @@
 package src
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
 	"net"
-    "fmt"
 )
 
 // Kademlia nodes store contact information about each other <IP, UDP port, Node ID>
 type Kademlia struct {
     node_contact RoutingTable
-    data map[string]string
+    data map[string][]byte
 }
 
 func InitNode(address net.Addr) Kademlia {
@@ -23,7 +25,7 @@ func InitNode(address net.Addr) Kademlia {
 >>>>>>> network_lookup
     return Kademlia{
         node_contact: routing_table,
-        data: make(map[string]string),
+        data: make(map[string][]byte),
     }
 }
 // Node lookup algorithm 
@@ -57,10 +59,39 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
 
 }
 
-func (kademlia *Kademlia) LookupData(hash string) {
-	// TODO
+func (kademlia *Kademlia) LookupData(hash string) ([]byte, bool){
+    // Take the sha1 encryption and check if it exists as a key
+    fmt.Println("1. Hash to look up: " + hash)
+    original, exists := kademlia.data[hash]
+    fmt.Printf("Original = %x", original)
+    fmt.Println("")
+    if exists{
+        fmt.Printf("2. The data you want exists: %s", original)
+        fmt.Println("")
+    } else{
+        fmt.Println("2. Does not exist")
+    }
+    return original, exists
 }
 
 func (kademlia *Kademlia) Store(data []byte) {
-	// TODO
+	// Encrypt the hash for our value
+    hash := Hash(data)
+
+    // Save the key value pair to current node
+    kademlia.data[hash] = data
+    //fmt.Println("Storing key value pair, DONE")
+    fmt.Println("Stored the hash: " + hash)
+    //fmt.Println("Key value is: " + kademlia.data[hash])
+    return
+}
+
+func Hash(data []byte) (string) {
+    // Create the hash value
+    hasher := sha1.Sum(data)
+
+    // Convert the hash to hexadecmial string
+    hash := hex.EncodeToString(hasher[0:IDLength])
+    fmt.Println("Hashing DONE")
+    return hash
 }
