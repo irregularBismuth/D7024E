@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 	"time"
-    "bytes"
+    //"bytes"
 )
 
 type RPCTypes string
@@ -152,17 +152,20 @@ func (network *Network) RequestResponseWorker(buffer []byte){
    
     // ##################################### Fetch from UDP socket 
     connection := network.srv.socketConnection // the request clients connection object
-    _, _, err := connection.ReadFromUDP(buffer) 
+    n, _, err := connection.ReadFromUDP(buffer) 
     if err != nil {
         //return err 
         fmt.Println(err)
     }
     
     // ##################################### Unmarshal data
-    buffer_result := bytes.Trim(buffer,"\x00")
-    decoded_json_err := json.Unmarshal(buffer_result, &request_msg) //deseralize json 
+    //buffer_result := bytes.Trim(buffer,"\x00")
+    //fmt.Println("Trimmed buffer result: ",buffer_result)
+    //decoded_json_err := json.Unmarshal(buffer_result, &request_msg) //deseralize json 
+    decoded_json_err := json.Unmarshal(buffer[:n], &request_msg) //deseralize json 
+        
     if decoded_json_err != nil {
-            fmt.Println(decoded_json_err)
+            fmt.Println(decoded_json_err.Error())
     }
 
     if request_msg.IsRequest{
