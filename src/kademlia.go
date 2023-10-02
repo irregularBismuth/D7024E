@@ -17,12 +17,8 @@ func InitNode(address net.Addr) Kademlia {
     var id_node *KademliaID = NewRandomKademliaID()
     var new_contact Contact = NewContact(id_node, address.String())
     var routing_table RoutingTable = *NewRoutingTable(new_contact)
-<<<<<<< HEAD
-    //fmt.Println("New node was created with Address: ",address.String()) 
-    fmt.Println("New node was created with ID: ",id_node.String()) 
-=======
+
     fmt.Printf("New node was created with: \n Address: %s\n Contact: %s\n ID: %s\n",address.String(), new_contact.String(), id_node.String()) 
->>>>>>> network_lookup
     return Kademlia{
         node_contact: routing_table,
         data: make(map[string][]byte),
@@ -45,15 +41,12 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
         contact := shortlist_contacts[i]
         //println(contact.String())
         
-<<<<<<< HEAD
-=======
         // call RPC for FIND_NODE here
         // FIND NODE = k-closest = []Contacts
         target_addr,_ := net.ResolveUDPAddr("udp", contact.Address)
         response := node_network.FetchRPCResponse(FindNode,"lookup_rpc_id",&contact, target_addr)
         fmt.Println("FIND NODE response: ",response.Contacts)
         
->>>>>>> network_lookup
     }
     return shortlist_contacts
 

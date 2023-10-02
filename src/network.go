@@ -1,27 +1,15 @@
 package src
 
 import (
-<<<<<<< HEAD
     "net"
     "fmt"
-	"bytes"
 	// "crypto/sha256"
-	"encoding/json"
-=======
 	//"bytes"
 	//"encoding/json"
-	"fmt"
->>>>>>> network_lookup
 	"log"
 	"os"
 	"strconv"
-<<<<<<< HEAD
-	//"time"
-=======
-	"time"
 
-	//"golang.org/x/text/message"
->>>>>>> d5bca4bdcd9b63eec03b1d35eb877bd73d032a06
 )
 
 
@@ -347,22 +335,20 @@ func (network *Network) SendFindContactMessage(contact *Contact) []byte {
     fmt.Printf("RPC request message to send: %s\n", string(json_msg))
     return json_msg
 }
-
+*/
 func (network *Network) SendFindDataMessage(hash string) {
 	fmt.Println("1. Reached Send GET message")
-    network.kademliaNodes.LookupData(hash)
+    network.node.LookupData(hash)
 }
 
 func (network *Network) SendStoreMessage(data string) {
     byteString := []byte(data)    
-    network.kademliaNodes.Store(byteString)
+    network.node.Store(byteString)
 }
-<<<<<<< HEAD
-*/
-=======
+
 
 //func (network *Network) SendGetMessage(hash string) {
 //    //fmt.Println("1. Reached Send GET message")
 //    network.kademliaNodes.LookupData(hash)
 //}
->>>>>>> d5bca4bdcd9b63eec03b1d35eb877bd73d032a06
+

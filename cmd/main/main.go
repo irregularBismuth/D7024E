@@ -17,16 +17,11 @@ func main(){
     kademliaNetwork := src.InitNodeNetwork()
     go kademliaNetwork.ProcessRequestChannel()
     go kademliaNetwork.ListenServer()
-<<<<<<< HEAD
     
     kademliaNetwork.JoinNetwork()
 
-    src.RunCLI()
-=======
-    go kademliaNetwork.HandleResponseChannel() 
-    //kademliaNetwork.BootstrapConnect()
-    src.RunCLI(&kademliaNetwork)
->>>>>>> d5bca4bdcd9b63eec03b1d35eb877bd73d032a06
+    //src.RunCLI(&kademliaNetwork)
+    
     //kademliaNetwork.BootstrapConnect()
    // go kademliaNetwork.ListenJoin()
     //kademliaNetwork.SendStoreMessage("test")
