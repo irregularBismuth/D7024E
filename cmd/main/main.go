@@ -7,7 +7,6 @@ import (
     "time"
 )
 
-
 func init() { rand.Seed(time.Now().UTC().UnixNano())}
 
 func main(){
@@ -35,5 +34,8 @@ func main(){
     fmt.Println("132 3212")*/
 
 
+    src.RunCLI()
+    //kademliaNetwork.BootstrapConnect()
+   // go kademliaNetwork.ListenJoin()
     for {}
 }
