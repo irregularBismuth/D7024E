@@ -43,7 +43,7 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
         // call RPC for FIND_NODE here
         // FIND NODE = k-closest = []Contacts
         target_addr,_ := net.ResolveUDPAddr("udp", contact.Address)
-        response := node_network.FetchRPCResponse(FindNode,"lookup_rpc_id",&contact, target_addr)
+        response := node_network.FetchRPCResponse(FindNode,"lookup_rpc_id",&contact, target_addr, "",)
         fmt.Println("FIND NODE response: ",response.Contacts)
         
     }
@@ -51,19 +51,29 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
 
 }
 
-func (kademlia *Kademlia) LookupData(hash string) ([]byte, bool){
+func (kademlia *Kademlia) LookupData(network *Network, hash string) ([]byte, bool){
     // Take the sha1 encryption and check if it exists as a key
-    //fmt.Println("1. Hash to look up: " + hash)
-    original, exists := kademlia.data[hash]
-    //fmt.Printf("Original = %x", original)
+    original, exists := kademlia.data[hash] // On self
     fmt.Println("")
+    var a []Contact
+
     if exists{
-        fmt.Printf("The data you want exists: %s", original)
-        fmt.Println("")
-    } else{
-        fmt.Println("The data does not exist")
+        fmt.Printf("The data you want already exists: %s \n", original)
+    } else {
+        fmt.Println("The data can't be found on self, searching..")
+        a = kademlia.node_contact.FindClosestContacts(kademlia.node_contact.me.ID ,3)
+        for i := 0; i < len(a); i++ {
+            target_node := a[i]
+            target_addr, _ := net.ResolveUDPAddr("udp", target_node.Address)
+            value_response := network.FetchRPCResponse(FindValue, "get_me_your_data", &network.node.node_contact.me, target_addr, "MY_HASH123");
+
+            kademlia.Store([]byte(value_response.Value))
+            fmt.Printf("Object found and downloaded.")
+        }
     }
     return original, exists
+
+
 }
 
 func (kademlia *Kademlia) Store(data []byte) {
@@ -74,7 +84,7 @@ func (kademlia *Kademlia) Store(data []byte) {
     kademlia.data[hash] = data
     //fmt.Println("Storing key value pair, DONE")
     fmt.Println("Stored the hash: " + hash)
-    //fmt.Println("Key value is: " + kademlia.data[hash])
+    fmt.Printf("Key value is: %s \n", kademlia.data[hash])
     return
 }
 

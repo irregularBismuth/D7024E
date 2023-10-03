@@ -82,15 +82,25 @@ func (network *Network) ProcessRequestChannel(){
 }
 
 // This will send a RPC request and wait for response value to return from the response channel 
-func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr) *PayloadData{
+func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr, hash string) *PayloadData{
+    var payload PayloadData
+
     src_addr := network.srv.serverAddress
-    src_payload := PayloadData{nil, *contact,"","","",""} //empty request payload 
-    new_request := CreateRPC(rpc_type, rpc_id, src_payload, *src_addr, *dst_addr)
+
+    if hash != ""{
+        payload = PayloadData{nil, *contact, "","","",hash}
+    }else {
+        payload = PayloadData{nil, *contact, "","","",hash}
+    }
+
+    //src_payload := PayloadData{nil, *contact,"","","",""} //empty request payload 
+    new_request := CreateRPC(rpc_type, rpc_id, payload, *src_addr, *dst_addr)
     network.SendRequestRPC(new_request)
 
     for response := range network.srv.response_channel{
         if response.ResponseID == rpc_id{
-            fmt.Printf("Received RPC response: %s to: %s with response id: %s\n", response.StringMessage, response.Contact.Address, response.ResponseID) 
+            fmt.Printf("Received RPC response: %s to: %s with response id: %s\n", response.StringMessage, response.Contact.Address, response.ResponseID)
+            
             return &response
         }
     }
@@ -131,6 +141,10 @@ func (network *Network) SendResponseReply(response_msg *MessageBuilder){
         response_msg.Response.Contact = network.node.node_contact.me 
 
     case FindValue:
+        hash := response_msg.Response.StringMessage
+        response_hash_value := network.node.data[hash]
+        
+        response_msg.Response.Value = string(response_hash_value)
 
     case JoinNetwork:
         response_msg.Response.Contact = network.node.node_contact.me

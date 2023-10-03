@@ -137,7 +137,7 @@ func (network *Network) BootstrapJoinProcess(){
     
     // 1. Add contact 
     //response_contact := network.SendRPC(JoinNetwork, &contact, conn)
-    rpc_response := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &contact, boot_addr) 
+    rpc_response := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &contact, boot_addr, "") 
     network.node.node_contact.AddContact(rpc_response.Contact)
     fmt.Println("(1) Added the contact: ",rpc_response.Contact)
     // 2. Node lookup on itself 
@@ -161,7 +161,7 @@ func (network *Network) JoinNetwork() {
         boot_addr, _ := GetBootnodeAddr() 
         //conn, _ := BootnodeConnect(boot_addr)
         contact := network.node.node_contact.me
-        rpc_response := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr) 
+        rpc_response := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr, "") 
         fmt.Println("Controll response received: ", rpc_response.StringMessage) 
         //go network.SendRPC(Ping, &contact, conn)
     }
