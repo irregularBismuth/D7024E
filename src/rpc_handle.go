@@ -25,6 +25,7 @@ type PayloadData struct {
     Key string `json:"key"`
     Value string `json:"value"`
     StringMessage string `json:"stringMessage"`
+    Error error `json:"error"`
 }
 
 type MessageBuilder struct{
@@ -40,7 +41,6 @@ func CreateRPC(msg_type RPCTypes, request_id string, payload PayloadData, src_ad
     new_message := MessageBuilder{
         MessageType: msg_type,
         RequestID: request_id,
-        //Contact: contact,
         Response: payload,
         SourceAddress: &src_addr,
         DestinationAddress: &dst_addr,
@@ -50,16 +50,17 @@ func CreateRPC(msg_type RPCTypes, request_id string, payload PayloadData, src_ad
 }
 
 // Send the RPC message to queue or channel for processing
-func (network *Network) AddToRequestChannel(request_msg *MessageBuilder){
+func (network *Network) AddToRequestChannel(request_msg *MessageBuilder, request_err error){
     // should feed unique request ID for processing the correct response. 
     fmt.Printf("Received RPC request: %s from: %s with request id: %s\n", request_msg.MessageType, request_msg.Response.Contact.Address, request_msg.RequestID) 
+    request_msg.Response.Error = request_err
     network.srv.request_channel<-*request_msg
 }
 
 // Send the RPC response to channel for processing
-func (network *Network) AddToResponseChannel(response_msg *PayloadData){
+func (network *Network) AddToResponseChannel(response_msg *PayloadData, response_err error){
     // should feed unique request ID for processing the correct response. 
-    //fmt.Printf("Adding RPC response to channel: %s to: %s with response id: %s\n", response_msg.StringMessage, response_msg.Contact.Address, response_msg.ResponseID) 
+    response_msg.Error = response_err
     network.srv.response_channel<-*response_msg
 }
 
@@ -84,13 +85,16 @@ func (network *Network) ProcessRequestChannel(){
 // This will send a RPC request and wait for response value to return from the response channel 
 func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr) *PayloadData{
     src_addr := network.srv.serverAddress
-    src_payload := PayloadData{nil, *contact,"","","",""} //empty request payload 
+    src_payload := PayloadData{nil, *contact,"","","","",nil} //empty request payload 
     new_request := CreateRPC(rpc_type, rpc_id, src_payload, *src_addr, *dst_addr)
     network.SendRequestRPC(new_request)
 
     for response := range network.srv.response_channel{
         if response.ResponseID == rpc_id{
-            fmt.Printf("Received RPC response: %s to: %s with response id: %s\n", response.StringMessage, response.Contact.Address, response.ResponseID) 
+            fmt.Printf("Received RPC response: %s to: %s with response id: %s\n", response.StringMessage, response.Contact.Address, response.ResponseID)
+            fmt.Println("Response received updating contact bucket now!")
+            network.UpdateHandleBuckets(response.Contact) // response bucket update 
+            
             return &response
         }
     }
@@ -118,21 +122,32 @@ func (network *Network) SendResponseReply(response_msg *MessageBuilder){
     dest_ip := response_msg.DestinationAddress.IP.String()
     dest_port := response_msg.DestinationAddress.Port
 
+    // Checking if request message resulted in a successful nil error, which invokes 'UpdateHandleBuckets'
+    if response_msg.Response.Error == nil {
+        network.UpdateHandleBuckets(response_msg.Response.Contact)
+    }
+
     switch response_msg.MessageType{
     case Ping:
+        //network.UpdateHandleBuckets(response_msg.Response.Contact) // request bucket update 
         response_msg.Response.Contact = network.node.node_contact.me
         response_msg.Response.StringMessage = "PONG"
     case Store:
 
     case FindNode:
+        //network.UpdateHandleBuckets(response_msg.Response.Contact) // request bucket update 
         target_id := response_msg.Response.Contact.ID
         k_closest_nodes := network.node.node_contact.FindClosestContacts(target_id,3)
         response_msg.Response.Contacts = k_closest_nodes
         response_msg.Response.Contact = network.node.node_contact.me 
 
     case FindValue:
+        network.UpdateHandleBuckets(response_msg.Response.Contact) // request bucket update 
+        
 
     case JoinNetwork:
+        network.UpdateHandleBuckets(response_msg.Response.Contact) // request bucket update 
+        
         response_msg.Response.Contact = network.node.node_contact.me
         response_msg.Response.StringMessage = "Bootstrap joining!"
     }
@@ -149,12 +164,12 @@ func (network *Network) SendResponseReply(response_msg *MessageBuilder){
 func (network *Network) RequestResponseWorker(buffer []byte){
     var request_msg MessageBuilder //deseralized json to struct object
     var response_msg PayloadData // Payload response data to send back to client
-   
+    var error_msg error // represent if the request get error when unmarshalling
+    
     // ##################################### Fetch from UDP socket 
     connection := network.srv.socketConnection // the request clients connection object
     n, _, err := connection.ReadFromUDP(buffer) 
     if err != nil {
-        //return err 
         fmt.Println(err)
     }
     
@@ -166,17 +181,20 @@ func (network *Network) RequestResponseWorker(buffer []byte){
         
     if decoded_json_err != nil {
             fmt.Println(decoded_json_err.Error())
+            error_msg = decoded_json_err
+    }else{
+        error_msg = nil
     }
 
     if request_msg.IsRequest{
         // If RPC request was received we add it to the request channel
         // this will be handled in a goroutine function "ProcessRequestChannel" which will send a response back
-        go network.AddToRequestChannel(&request_msg)
+        go network.AddToRequestChannel(&request_msg, error_msg)
        
     }else{
         // If RPC response was received we add it to the response channel 
         response_msg = request_msg.Response
-        go network.AddToResponseChannel(&response_msg)
+        go network.AddToResponseChannel(&response_msg, error_msg)
     }
 }
 

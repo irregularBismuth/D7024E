@@ -10,6 +10,10 @@ type RoutingTable struct {
 	buckets [IDLength * 8]*bucket
 }
 
+func GetMaximumBucketSize() int {
+    return bucketSize
+}
+
 // NewRoutingTable returns a new instance of a RoutingTable
 func NewRoutingTable(me Contact) *RoutingTable {
 	routingTable := &RoutingTable{}

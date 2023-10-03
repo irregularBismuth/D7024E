@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-
 )
 
 
@@ -126,21 +125,21 @@ func GetBootnodeAddr() (*net.UDPAddr, error){
 }
 
 func (network *Network) BootstrapJoinProcess(){
-    // known bootstrap node connection
+    fmt.Println("Steps to perform:\n 1. Add contact\n 2. Node lookup on itself\n 3. Refresh")
+    
     boot_addr, _ := GetBootnodeAddr() 
-    //conn, _ := BootnodeConnect(boot_addr)
-    contact := network.node.node_contact.me
+    self_contact := network.node.node_contact.me
     
     // 1. Add contact 
-    //response_contact := network.SendRPC(JoinNetwork, &contact, conn)
-    rpc_response := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &contact, boot_addr) 
+    rpc_response := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &self_contact, boot_addr) 
     network.node.node_contact.AddContact(rpc_response.Contact)
     fmt.Println("(1) Added the contact: ",rpc_response.Contact)
-    // 2. Node lookup on itself 
-    //self_contact := network.node.node_contact.me
-    //resulting_lookup_contacts := network.node.LookupContact(network, &self_contact)
-    //fmt.Println("Lookup result: ", resulting_lookup_contacts)
     
+    // 2. Node lookup on itself 
+    network.node.LookupContact(network, &self_contact)
+   
+    // Refresh step 
+
 }
 
 // Should we return node object here or not? 
@@ -150,7 +149,7 @@ func (network *Network) JoinNetwork() {
     if bootNodevar == 1 {
         println("Initialiazing network - Creating bootnode!\n")
     } else if bootNodevar == 0 {
-        println("Starting bootstraping join process!\n")
+        //println("Starting bootstraping join process!\n")
         network.BootstrapJoinProcess()
 
         // RPC tests here:
@@ -159,9 +158,31 @@ func (network *Network) JoinNetwork() {
         contact := network.node.node_contact.me
         rpc_response := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr) 
         fmt.Println("Controll response received: ", rpc_response.StringMessage) 
-        //go network.SendRPC(Ping, &contact, conn)
     }
 
+}
+
+// This function update appropriate k-bucket for the sender's node ID.
+// The argument takes the target contacts bucket received from requests or response
+func (network *Network) UpdateHandleBuckets(target_contact Contact){
+   
+    // Fetch the correct bucket location based on bucket index
+    bucket_index := network.node.node_contact.getBucketIndex(target_contact.ID)
+    target_bucket := network.node.node_contact.buckets[bucket_index]
+    
+
+    // if bucket is not full = add the node to the bucket 
+    if target_bucket.Len() < GetMaximumBucketSize() {
+        network.node.node_contact.AddContact(target_contact)
+    }else if target_bucket.Len() == GetMaximumBucketSize() {
+        // If bucket is full - ping the k-bucket's least-recently seen node 
+
+    } 
+
+    // if bucket is full - receipent pings the k-bucket's least-recently seen node 
+    // If recently seen node fails to respond, it is removed from the k-bucket and the new sender inserted to the tail.
+    // If the recently seen node responds, it is moved to the tail of the list.
+    
 }
 
 // This function is to handle RPC messages from the receiver side
