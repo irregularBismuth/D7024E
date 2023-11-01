@@ -17,7 +17,7 @@ func main(){
     kademliaNetwork := src.InitNodeNetwork()
     go kademliaNetwork.ProcessRequestChannel()
     go kademliaNetwork.ListenServer()
-    
+    go src.RunCLI(&kademliaNetwork)
     kademliaNetwork.JoinNetwork()
 
     //kademliaNetwork.SendStoreMessage("test")
@@ -34,7 +34,7 @@ func main(){
     fmt.Println("132 3212")*/
 
 
-    src.RunCLI()
+    
     //kademliaNetwork.BootstrapConnect()
    // go kademliaNetwork.ListenJoin()
     for {}

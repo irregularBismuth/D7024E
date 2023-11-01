@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 	"time"
-    "bytes"
+    //"bytes"
 )
 
 type RPCTypes string
@@ -23,7 +23,7 @@ type PayloadData struct {
     Contact Contact `json:"contact"`
     ResponseID string `json:"responseID"`
     Key string `json:"key"`
-    Value string `json:"value"`
+    Value []byte `json:"value"`
     StringMessage string `json:"stringMessage"`
 }
 
@@ -84,13 +84,21 @@ func (network *Network) ProcessRequestChannel(){
 // This will send a RPC request and wait for response value to return from the response channel 
 func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr, hash string) *PayloadData{
     var payload PayloadData
+    var default_byte []byte
 
     src_addr := network.srv.serverAddress
+    switch rpc_type{
+    case FindNode:
 
+    case FindValue:
+        var default_byte []byte
+        payload = PayloadData{nil, *contact, "","",default_byte, hash}
+
+    }
     if hash != ""{
-        payload = PayloadData{nil, *contact, "","","",hash}
+        payload = PayloadData{nil, *contact, "","",default_byte, hash}
     }else {
-        payload = PayloadData{nil, *contact, "","","",hash}
+        payload = PayloadData{nil, *contact, "","",default_byte, hash}
     }
 
     //src_payload := PayloadData{nil, *contact,"","","",""} //empty request payload 
@@ -132,7 +140,11 @@ func (network *Network) SendResponseReply(response_msg *MessageBuilder){
     case Ping:
         response_msg.Response.Contact = network.node.node_contact.me
         response_msg.Response.StringMessage = "PONG"
+
     case Store:
+        data := response_msg.Response.StringMessage
+        network.node.Store([]byte(data))
+        fmt.Printf("Download from node: %s , SUCCESS", response_msg.Response.Contact.Address)
 
     case FindNode:
         target_id := response_msg.Response.Contact.ID
@@ -144,7 +156,7 @@ func (network *Network) SendResponseReply(response_msg *MessageBuilder){
         hash := response_msg.Response.StringMessage
         response_hash_value := network.node.data[hash]
         
-        response_msg.Response.Value = string(response_hash_value)
+        response_msg.Response.Value = response_hash_value
 
     case JoinNetwork:
         response_msg.Response.Contact = network.node.node_contact.me
@@ -166,15 +178,15 @@ func (network *Network) RequestResponseWorker(buffer []byte){
    
     // ##################################### Fetch from UDP socket 
     connection := network.srv.socketConnection // the request clients connection object
-    _, _, err := connection.ReadFromUDP(buffer) 
+    n, _, err := connection.ReadFromUDP(buffer) 
     if err != nil {
         //return err 
         fmt.Println(err)
     }
     
     // ##################################### Unmarshal data
-    buffer_result := bytes.Trim(buffer,"\x00")
-    decoded_json_err := json.Unmarshal(buffer_result, &request_msg) //deseralize json 
+    //buffer_result := bytes.Trim(buffer,"\x00")
+    decoded_json_err := json.Unmarshal(buffer[:n], &request_msg) //deseralize json 
     if decoded_json_err != nil {
             fmt.Println(decoded_json_err)
     }
