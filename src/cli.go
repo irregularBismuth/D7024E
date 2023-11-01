@@ -6,6 +6,7 @@ import(
 "bufio"
 "regexp"
 "strings"
+"net"
 )
 
 //had to have this for it to run properly
@@ -25,14 +26,27 @@ func FindCommands(cmd string,network *Network){
         fmt.Println("List of available commands is : \n\n Put takes one argument object as UTF-8 format you want to store on the network e.g \n Put str123")
     } else if(w[0]=="put"){
         if(len(w)==2){
-            network.SendStoreMessage(w[1])
+         //   network.SendStoreMessage(w[1])
             fmt.Println("Run put cmd")
+            network.node.Store([]byte(w[1]))
+            target_contact := network.node.node_contact.me
+            k_targets := network.node.node_contact.FindClosestContacts(network.node.node_contact.me.ID,3)
+            for i:=0; i< len(k_targets); i++ {
+                k_target:=k_targets[i]
+                target_addr,_ := net.resolveUDPAddr("udp",k_target.Address)
+                network.FetchRPCResponse(Store,"",&target_contact,target_addr,w[1])
+            }
         }else{ 
             fmt.Println("The put command takes in only 1 Argument of the object you want to store on the kademlia network\n")
         }
     } else if(w[0]=="get"){
         if(len(w)==2){
-        network.SendFindDataMessage(w[1])
+            content:=[]byte(w[1])
+            hash:=network.node.Hash(content)
+            fmt.Println("run get cmd")
+            original,exists := network.node.lookupData(network,hash)
+            fmt.Println(string(original),exists)
+
         }else{
             fmt.Println("You need to provide the hash of the object you want to retrieve \n")
         }
@@ -40,7 +54,6 @@ func FindCommands(cmd string,network *Network){
   
         fmt.Println("Terminate node")
         exitnooode(0)
-
 
     }else{
         fmt.Println("Command not found")

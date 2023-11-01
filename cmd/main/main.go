@@ -16,11 +16,9 @@ func main(){
     //kademliaNode:=src.InitNode(src.GetOutboundIP())
     kademliaNetwork := src.InitNodeNetwork()
     go kademliaNetwork.ProcessRequestChannel()
-    go kademliaNetwork.ListenServer()
-    
+    go kademliaNetwork.ListenServer() 
     kademliaNetwork.JoinNetwork()
-
-    //src.RunCLI(&kademliaNetwork)
+    go src.RunCLI(&kademliaNetwork)
     
     //kademliaNetwork.BootstrapConnect()
    // go kademliaNetwork.ListenJoin()
