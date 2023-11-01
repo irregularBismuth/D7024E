@@ -33,7 +33,7 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
     // NOTE: Whenever a node receives a communication from another, it updates the corresponding bucket.
     // If the contact already exists, it is moved to the end of the bucket.
     // If bucket is not full, the new contact is added at the end. 
-    
+     
     shortlist_contacts := kademlia.node_contact.FindClosestContacts(target.ID, 3)
     contacted_nodes := ContactCandidates{}
 
@@ -43,8 +43,12 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
         // call RPC for FIND_NODE here
         // FIND NODE = k-closest = []Contacts
         target_addr,_ := net.ResolveUDPAddr("udp", contact.Address)
-        response := node_network.FetchRPCResponse(FindNode,"lookup_rpc_id",target,target_addr)
-        fmt.Println("FIND NODE response: ",response.Contacts)
+        response, request_error := node_network.FetchRPCResponse(FindNode,"lookup_rpc_id",target,target_addr)
+        if request_error != nil {
+            fmt.Println("Request error: ", request_error.Error())
+        }else{
+            fmt.Println("FIND NODE response: ",response.Contacts)
+        }
         
         if len(response.Contacts) == 0{
             contacted_nodes.Append(response.Contacts)

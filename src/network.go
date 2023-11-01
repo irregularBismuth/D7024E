@@ -3,9 +3,6 @@ package src
 import (
     "net"
     "fmt"
-	// "crypto/sha256"
-	//"bytes"
-	//"encoding/json"
 	"log"
 	"os"
 	"strconv"
@@ -23,7 +20,6 @@ type UdpSocket struct {
     serverAddress *net.UDPAddr
     response_channel chan PayloadData
     request_channel chan MessageBuilder
-    
 }
 
 func NewUdpSocket(addr *net.UDPAddr) (UdpSocket){
@@ -113,7 +109,11 @@ func BootnodeConnect(boot_addr *net.UDPAddr) (*net.UDPConn, error){
     }
     //defer conn.Close()
     return conn, err 
-        
+}
+
+func GetNodeUDPAddr(address string) (*net.UDPAddr, error){
+    udp_addr, err := net.ResolveUDPAddr("udp", address)
+    return udp_addr, err
 }
 
 func GetBootnodeAddr() (*net.UDPAddr, error){
@@ -124,6 +124,18 @@ func GetBootnodeAddr() (*net.UDPAddr, error){
     return boot_addr, err
 }
 
+func (network *Network) ShowNodeBucketStatus(){
+    //current_buckets := network.node.node_contact.buckets
+    known_buckets := network.node.node_contact.buckets
+    for i:=0; i < len(known_buckets); i++{
+        bucket := known_buckets[i]
+        if bucket.Len() > 0 {
+            bucket.ShowContactsInBucket()
+        }
+    }
+     
+}
+
 func (network *Network) BootstrapJoinProcess(){
     fmt.Println("Steps to perform:\n 1. Add contact\n 2. Node lookup on itself\n 3. Refresh")
     
@@ -131,15 +143,19 @@ func (network *Network) BootstrapJoinProcess(){
     self_contact := network.node.node_contact.me
     
     // 1. Add contact 
-    rpc_response := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &self_contact, boot_addr) 
-    network.node.node_contact.AddContact(rpc_response.Contact)
-    fmt.Println("(1) Added the contact: ",rpc_response.Contact)
+    rpc_response, request_err := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &self_contact, boot_addr) 
+    
+    if request_err != nil {
+        fmt.Println("JoinNetwork request unsuccessful: ", request_err.Error())
+    }else{
+        network.node.node_contact.AddContact(rpc_response.Contact)
+        fmt.Println("(1) Added the contact: ",rpc_response.Contact)
+    }
     
     // 2. Node lookup on itself 
     network.node.LookupContact(network, &self_contact)
    
     // Refresh step 
-
 }
 
 // Should we return node object here or not? 
@@ -156,8 +172,12 @@ func (network *Network) JoinNetwork() {
         boot_addr, _ := GetBootnodeAddr() 
         //conn, _ := BootnodeConnect(boot_addr)
         contact := network.node.node_contact.me
-        rpc_response := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr) 
-        fmt.Println("Controll response received: ", rpc_response.StringMessage) 
+        rpc_response, request_err := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr)
+        if request_err != nil || rpc_response.Error != nil {
+            fmt.Printf("Request unsuccessful: %s or: %s\n",request_err.Error(),rpc_response.Error.Error())
+        }else{
+            fmt.Println("Controll response received: ", rpc_response.StringMessage) 
+        }
     }
 
 }
@@ -170,18 +190,33 @@ func (network *Network) UpdateHandleBuckets(target_contact Contact){
     bucket_index := network.node.node_contact.getBucketIndex(target_contact.ID)
     target_bucket := network.node.node_contact.buckets[bucket_index]
     
-
     // if bucket is not full = add the node to the bucket 
     if target_bucket.Len() < GetMaximumBucketSize() {
+        fmt.Printf("Bucket wasn't full adding contact: %s\n", target_contact.Address)
         network.node.node_contact.AddContact(target_contact)
     }else if target_bucket.Len() == GetMaximumBucketSize() {
-        // If bucket is full - ping the k-bucket's least-recently seen node 
+        // If bucket is full - ping the k-bucket's least-recently seen node
+        // least-recently node at the head & most-recently node at the tail 
+        
+        least_recently_node := target_bucket.GetLeastRecentlyNode()
+        least_recently_addr, _ := net.ResolveUDPAddr("udp", least_recently_node.Address)
+        my_contact := network.node.node_contact.me
+        fmt.Printf("Bucket was full trying to ping recently-seen node: %s\n",least_recently_node.Address)
+        rpc_ping, request_err := network.FetchRPCResponse(Ping, "bucket_full_ping_id", &my_contact, least_recently_addr)
+        
+        if request_err != nil || rpc_ping.Error != nil {
+            //failed to response - removed from the k-bucket and new sender inserted at the tail
+            fmt.Println("Request was unsuccessful, removing least-recently seen node from bucket: ", least_recently_node.Address)
+            network.node.node_contact.RemoveTargetContact(*least_recently_node)
+            
+        }else if rpc_ping.Error == nil{
+            //successful response -  contact is moved to the tail of the list 
+            fmt.Printf("Ping was successful adding/moving contact: %s to tail\n", rpc_ping.Contact.Address)
+            network.node.node_contact.AddContact(rpc_ping.Contact)
+        }
 
-    } 
-
-    // if bucket is full - receipent pings the k-bucket's least-recently seen node 
-    // If recently seen node fails to respond, it is removed from the k-bucket and the new sender inserted to the tail.
-    // If the recently seen node responds, it is moved to the tail of the list.
+    }
+    network.ShowNodeBucketStatus()
     
 }
 

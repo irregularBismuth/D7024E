@@ -72,7 +72,6 @@ func (network *Network) ProcessRequestChannel(){
                 fmt.Println("Channel closed. Exiting goroutine!")
                 return
             }
-            //go network.SendRequestRPC(&request_msg)
             go network.SendResponseReply(&request_msg)
 
         default: 
@@ -83,11 +82,11 @@ func (network *Network) ProcessRequestChannel(){
 }
 
 // This will send a RPC request and wait for response value to return from the response channel 
-func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr) *PayloadData{
+func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr) (*PayloadData, error){
     src_addr := network.srv.serverAddress
     src_payload := PayloadData{nil, *contact,"","","","",nil} //empty request payload 
     new_request := CreateRPC(rpc_type, rpc_id, src_payload, *src_addr, *dst_addr)
-    network.SendRequestRPC(new_request)
+    request_err := network.SendRequestRPC(new_request)
 
     for response := range network.srv.response_channel{
         if response.ResponseID == rpc_id{
@@ -95,13 +94,13 @@ func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, conta
             fmt.Println("Response received updating contact bucket now!")
             network.UpdateHandleBuckets(response.Contact) // response bucket update 
             
-            return &response
+            return &response, request_err
         }
     }
-    return nil
+    return nil, request_err
 }
 
-func (network *Network) SendRequestRPC(msg_payload *MessageBuilder){
+func (network *Network) SendRequestRPC(msg_payload *MessageBuilder) error{
     dest_ip := msg_payload.DestinationAddress.IP.String()
     dest_port := msg_payload.DestinationAddress.Port
     
@@ -109,9 +108,10 @@ func (network *Network) SendRequestRPC(msg_payload *MessageBuilder){
     fmt.Printf("Sending RPC request: %s to client: %s:%d \n",string(request_json), dest_ip, dest_port)
     if err !=nil {
         fmt.Println("Error seralizing response message",err)
-        return
+        return err
     }
-    network.srv.socketConnection.WriteTo(request_json, msg_payload.DestinationAddress)
+    _, request_error := network.srv.socketConnection.WriteTo(request_json, msg_payload.DestinationAddress)
+    return request_error
 }
 
 // Takes unmarshalled request data and process the response payload to send back to the client
@@ -124,30 +124,26 @@ func (network *Network) SendResponseReply(response_msg *MessageBuilder){
 
     // Checking if request message resulted in a successful nil error, which invokes 'UpdateHandleBuckets'
     if response_msg.Response.Error == nil {
+        fmt.Println("Request received updating contact buckets now!")
         network.UpdateHandleBuckets(response_msg.Response.Contact)
     }
 
     switch response_msg.MessageType{
     case Ping:
-        //network.UpdateHandleBuckets(response_msg.Response.Contact) // request bucket update 
         response_msg.Response.Contact = network.node.node_contact.me
         response_msg.Response.StringMessage = "PONG"
     case Store:
 
     case FindNode:
-        //network.UpdateHandleBuckets(response_msg.Response.Contact) // request bucket update 
         target_id := response_msg.Response.Contact.ID
         k_closest_nodes := network.node.node_contact.FindClosestContacts(target_id,3)
         response_msg.Response.Contacts = k_closest_nodes
         response_msg.Response.Contact = network.node.node_contact.me 
 
     case FindValue:
-        network.UpdateHandleBuckets(response_msg.Response.Contact) // request bucket update 
         
 
     case JoinNetwork:
-        network.UpdateHandleBuckets(response_msg.Response.Contact) // request bucket update 
-        
         response_msg.Response.Contact = network.node.node_contact.me
         response_msg.Response.StringMessage = "Bootstrap joining!"
     }
@@ -173,12 +169,7 @@ func (network *Network) RequestResponseWorker(buffer []byte){
         fmt.Println(err)
     }
     
-    // ##################################### Unmarshal data
-    //buffer_result := bytes.Trim(buffer,"\x00")
-    //fmt.Println("Trimmed buffer result: ",buffer_result)
-    //decoded_json_err := json.Unmarshal(buffer_result, &request_msg) //deseralize json 
     decoded_json_err := json.Unmarshal(buffer[:n], &request_msg) //deseralize json 
-        
     if decoded_json_err != nil {
             fmt.Println(decoded_json_err.Error())
             error_msg = decoded_json_err
