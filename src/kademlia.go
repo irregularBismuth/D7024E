@@ -59,18 +59,35 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
 
 }
 
-func (kademlia *Kademlia) LookupData(hash string) ([]byte, bool){
+func (kademlia *Kademlia) LookupData(network *Network,hash string) ([]byte, bool){
     // Take the sha1 encryption and check if it exists as a key
     fmt.Println("1. Hash to look up: " + hash)
     original, exists := kademlia.data[hash]
     fmt.Printf("Original = %x", original)
     fmt.Println("")
+    var a []Contact 
     if exists{
         fmt.Printf("2. The data you want exists: %s", original)
         fmt.Println("")
     } else{
         fmt.Println("2. Does not exist")
+        fmt.Println("The data can't be found on self, searching through K closest Nodes")
+        boot_addr, _ := GetBootnodeAddr()
+        bootnode_contact := network.FetchRPCResponse(Ping,"boot_node_contact_id",&network.node.node_contact.me,boot_addr,"")
+        
+        a = kaddemlia.node.node_contact.AddContact(&bootnode_contact.Contact)
+        for i:=0; i<len(a); ++i {
+            target_node:= a[i]
+            target_addr, _ := net.ResolveUDPAddr("udp",target_node.Address)
+            value_response := network.FetchRPCResponse(FindValue,"",&network.node.node_contact.me,target_addr,hash)
+            kademlia.Store(value_response.Value)
+            fmt.Printf("Object found and downloaded %s",string(value_response.Value))
+        }
+        
+        return original,exists
+
     }
+
     return original, exists
 }
 
