@@ -54,12 +54,6 @@ func FindCommands(cmd string,network *Network){
   
         fmt.Println("Terminate node")
         exitnooode(0)
-
-    }else if (w[0]=="ping") {
-        fmt.Println("ping node");
-        
-    } else if (w[0]=="join") {
-        
     } else{
         fmt.Println("Command not found")
     }
