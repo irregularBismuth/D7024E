@@ -23,7 +23,7 @@ type PayloadData struct {
     Contact Contact `json:"contact"`
     ResponseID string `json:"responseID"`
     Key string `json:"key"`
-    Value string `json:"value"`
+    Value []byte `json:"value"`
     StringMessage string `json:"stringMessage"`
     Error error `json:"error"`
 }
@@ -87,6 +87,13 @@ func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, conta
     src_payload := PayloadData{nil, *contact,"","","","",nil} //empty request payload 
     new_request := CreateRPC(rpc_type, rpc_id, src_payload, *src_addr, *dst_addr)
     request_err := network.SendRequestRPC(new_request)
+    var default_byte []byte
+    var payload PayloadData
+    switch rpc_type {
+        case FindValue:
+            payload = PayloadData(nil,*contact,"","",default_byte)
+
+    } 
 
     for response := range network.srv.response_channel{
         if response.ResponseID == rpc_id{

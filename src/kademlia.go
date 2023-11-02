@@ -76,8 +76,8 @@ func (kademlia *Kademlia) LookupData(network *Network,hash string) ([]byte, bool
         bootnode_contact := network.FetchRPCResponse(Ping,"boot_node_contact_id",&network.node.node_contact.me,boot_addr,"")
         
         a = kaddemlia.node.node_contact.AddContact(&bootnode_contact.Contact)
-        for i:=0; i<len(a); ++i {
-            target_node:= a[i]
+        for i:=0; i<len(a); i++{
+            target_node := a[i]
             target_addr, _ := net.ResolveUDPAddr("udp",target_node.Address)
             value_response := network.FetchRPCResponse(FindValue,"",&network.node.node_contact.me,target_addr,hash)
             kademlia.Store(value_response.Value)
