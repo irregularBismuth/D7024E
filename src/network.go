@@ -143,7 +143,7 @@ func (network *Network) BootstrapJoinProcess(){
     self_contact := network.node.node_contact.me
     
     // 1. Add contact 
-    rpc_response, request_err := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &self_contact, boot_addr) 
+    rpc_response, request_err := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &self_contact, boot_addr, "") 
     
     if request_err != nil {
         fmt.Println("JoinNetwork request unsuccessful: ", request_err.Error())
@@ -172,7 +172,7 @@ func (network *Network) JoinNetwork() {
         boot_addr, _ := GetBootnodeAddr() 
         //conn, _ := BootnodeConnect(boot_addr)
         contact := network.node.node_contact.me
-        rpc_response, request_err := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr)
+        rpc_response, request_err := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr, "")
         if request_err != nil || rpc_response.Error != nil {
             fmt.Printf("Request unsuccessful: %s or: %s\n",request_err.Error(),rpc_response.Error.Error())
         }else{
@@ -202,7 +202,7 @@ func (network *Network) UpdateHandleBuckets(target_contact Contact){
         least_recently_addr, _ := net.ResolveUDPAddr("udp", least_recently_node.Address)
         my_contact := network.node.node_contact.me
         fmt.Printf("Bucket was full trying to ping recently-seen node: %s\n",least_recently_node.Address)
-        rpc_ping, request_err := network.FetchRPCResponse(Ping, "bucket_full_ping_id", &my_contact, least_recently_addr)
+        rpc_ping, request_err := network.FetchRPCResponse(Ping, "bucket_full_ping_id", &my_contact, least_recently_addr, "")
         
         if request_err != nil || rpc_ping.Error != nil {
             //failed to response - removed from the k-bucket and new sender inserted at the tail
@@ -391,7 +391,7 @@ func (network *Network) SendFindContactMessage(contact *Contact) []byte {
     fmt.Printf("RPC request message to send: %s\n", string(json_msg))
     return json_msg
 }
-*/
+
 func (network *Network) SendFindDataMessage(hash string) {
 	fmt.Println("1. Reached Send GET message")
     network.node.LookupData(hash)
@@ -401,7 +401,7 @@ func (network *Network) SendStoreMessage(data string) {
     byteString := []byte(data)    
     network.node.Store(byteString)
 }
-
+*/
 
 //func (network *Network) SendGetMessage(hash string) {
 //    //fmt.Println("1. Reached Send GET message")

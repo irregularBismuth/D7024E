@@ -82,18 +82,21 @@ func (network *Network) ProcessRequestChannel(){
 }
 
 // This will send a RPC request and wait for response value to return from the response channel 
-func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr) (*PayloadData, error){
-    src_addr := network.srv.serverAddress
-    src_payload := PayloadData{nil, *contact,"","","","",nil} //empty request payload 
-    new_request := CreateRPC(rpc_type, rpc_id, src_payload, *src_addr, *dst_addr)
-    request_err := network.SendRequestRPC(new_request)
-    var default_byte []byte
+func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr, hash string) (*PayloadData, error){
     var payload PayloadData
+    var default_byte []byte
+    src_addr := network.srv.serverAddress
+    //new_request := CreateRPC(rpc_type, rpc_id, payload, *src_addr, *dst_addr)
+    //request_err := network.SendRequestRPC(new_request)
+
     switch rpc_type {
         case FindValue:
-            payload = PayloadData(nil,*contact,"","",default_byte)
+            payload = PayloadData{nil, *contact, "", "", default_byte, hash, payload.Error}
 
-    } 
+    }
+
+    new_request := CreateRPC(rpc_type, rpc_id, payload, *src_addr, *dst_addr)
+    request_err := network.SendRequestRPC(new_request)
 
     for response := range network.srv.response_channel{
         if response.ResponseID == rpc_id{
