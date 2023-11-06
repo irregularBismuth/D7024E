@@ -43,7 +43,7 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
         // call RPC for FIND_NODE here
         // FIND NODE = k-closest = []Contacts
         target_addr,_ := net.ResolveUDPAddr("udp", contact.Address)
-        response, request_error := node_network.FetchRPCResponse(FindNode,"lookup_rpc_id",target,target_addr, "")
+        response, request_error := node_network.FetchRPCResponse(FindNode,"lookup_rpc_id",target,target_addr)
         if request_error != nil {
             fmt.Println("Request error: ", request_error.Error())
         }else{
@@ -61,33 +61,39 @@ func (kademlia *Kademlia) LookupContact(node_network *Network, target *Contact) 
 
 func (kademlia *Kademlia) LookupData(network *Network,hash string) ([]byte, bool){
     // Take the sha1 encryption and check if it exists as a key
-    original, exists := kademlia.data[hash] // On self
+    fmt.Println("1. Hash to look up: " + hash)
+    original, exists := kademlia.data[hash]
+    fmt.Printf("Original = %x", original)
     fmt.Println("")
-    var a []Contact
-
+    var a []Contact 
     if exists{
-        fmt.Printf("The data you want already exists: %s \n", original)
-    } else {
-        fmt.Println("The data can't be found on self, searching through K closest nodes")
+        fmt.Printf("2. The data you want exists: %s", original)
+        fmt.Println("")
+    } else{
+        fmt.Println("2. Does not exist")
+        fmt.Println("The data can't be found on self, searching through K closest Nodes")
         boot_addr, _ := GetBootnodeAddr()
-        bootnode_contact,_ := network.FetchRPCResponse(Ping, "boot_node_contact_id", &network.node.node_contact.me,boot_addr, "")
-        network.node.node_contact.AddContact(bootnode_contact.Contact)
-        a = kademlia.node_contact.FindClosestContacts(kademlia.node_contact.me.ID ,3)
-        for i := 0; i < len(a); i++ {
+        bootnode_contact := network.FetchRPCResponse(Ping,"boot_node_contact_id",&network.node.node_contact.me,boot_addr,"")
+        
+        a = kaddemlia.node.node_contact.AddContact(&bootnode_contact.Contact)
+        for i:=0; i<len(a); i++{
             target_node := a[i]
-            target_addr, _ := net.ResolveUDPAddr("udp", target_node.Address)
-            value_response,_ := network.FetchRPCResponse(FindValue, "", &network.node.node_contact.me, target_addr, hash);
-
-            kademlia.Store((value_response.Value))
-            fmt.Printf("Object found and downloaded: %s", string(value_response.Value))
+            target_addr, _ := net.ResolveUDPAddr("udp",target_node.Address)
+            value_response := network.FetchRPCResponse(FindValue,"",&network.node.node_contact.me,target_addr,hash)
+            kademlia.Store(value_response.Value)
+            fmt.Printf("Object found and downloaded %s",string(value_response.Value))
         }
+        
+        return original,exists
+
     }
-    return original, exists 
+
+    return original, exists
 }
 
 func (kademlia *Kademlia) Store(data []byte) {
 	// Encrypt the hash for our value
-    hash := kademlia.Hash(data)
+    hash := Hash(data)
 
     // Save the key value pair to current node
     kademlia.data[hash] = data
@@ -97,7 +103,7 @@ func (kademlia *Kademlia) Store(data []byte) {
     return
 }
 
-func (kademlia *Kademlia) Hash(data []byte) (string) {
+func Hash(data []byte) (string) {
     // Create the hash value
     hasher := sha1.Sum(data)
 

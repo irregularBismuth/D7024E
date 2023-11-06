@@ -17,10 +17,10 @@ func FindCommands(cmd string,network *Network){
     r:= regexp.MustCompile("[^\\s]+")
     w:=r.FindAllString(cmd,-1)
 
-    if(len(w) > 0 ){
     for i,s := range w {
         w[i] = strings.ToLower(s)
     }
+
 
     if(w[0]=="help") {
         fmt.Println("List of available commands is : \n\n Put takes one argument object as UTF-8 format you want to store on the network e.g \n Put str123")
@@ -33,7 +33,7 @@ func FindCommands(cmd string,network *Network){
             k_targets := network.node.node_contact.FindClosestContacts(network.node.node_contact.me.ID,3)
             for i:=0; i< len(k_targets); i++ {
                 k_target:=k_targets[i]
-                target_addr,_ := net.ResolveUDPAddr("udp",k_target.Address)
+                target_addr,_ := net.resolveUDPAddr("udp",k_target.Address)
                 network.FetchRPCResponse(Store,"",&target_contact,target_addr,w[1])
             }
         }else{ 
@@ -44,7 +44,7 @@ func FindCommands(cmd string,network *Network){
             content:=[]byte(w[1])
             hash:=network.node.Hash(content)
             fmt.Println("run get cmd")
-            original,exists := network.node.LookupData(network,hash)
+            original,exists := network.node.lookupData(network,hash)
             fmt.Println(string(original),exists)
 
         }else{
@@ -57,7 +57,6 @@ func FindCommands(cmd string,network *Network){
     } else{
         fmt.Println("Command not found")
     }
-}
 
 }
 
