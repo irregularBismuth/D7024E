@@ -148,14 +148,17 @@ func (network *Network) BootstrapJoinProcess(){
     if request_err != nil {
         fmt.Println("JoinNetwork request unsuccessful: ", request_err.Error())
     }else{
-        network.node.node_contact.AddContact(rpc_response.Contact)
-        fmt.Println("(1) Added the contact: ",rpc_response.Contact)
+        //network.node.node_contact.AddContact(rpc_response.Contact)
+        fmt.Println("(1) Added the contact from response node: ",rpc_response.Contact)
+ 
+        // 2. Node lookup on itself 
+        network.node.LookupContact(network, &self_contact)
+
+        // Refresh step - picking a random ID in the bucket's range and perform a node search for that ID
+
+
     }
     
-    // 2. Node lookup on itself 
-    network.node.LookupContact(network, &self_contact)
-   
-    // Refresh step 
 }
 
 // Should we return node object here or not? 
