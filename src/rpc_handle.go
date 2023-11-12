@@ -96,10 +96,16 @@ func (network *Network) AsynchronousFindNode(target_node *Contact, dst_addr *net
     
     src_payload := PayloadData{nil, *target_node,"","",[]byte{},"",nil} //empty request payload 
     new_request := CreateRPC(FindNode, request_id, src_payload, *src_addr, *dst_addr)
-    network.SendRequestRPC(new_request)
+    request_error := network.SendRequestRPC(new_request)
 
-    response := network.ReadResponseChannel(*new_request)
-    response_ch <- *response // transfer/send response payload to other channel
+    if (request_error != nil){
+        err_payload := PayloadData{nil, *target_node,"","",[]byte{},"",request_error} //empty request payload 
+        response_ch <- err_payload // transfer/send response payload to other channel
+        
+    }else{
+        response := network.ReadResponseChannel(*new_request)
+        response_ch <- *response // transfer/send response payload to other channel
+    }    
     
 }
 

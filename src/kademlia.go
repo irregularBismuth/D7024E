@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
-	//"sync"
 )
 
 // Kademlia nodes store contact information about each other <IP, UDP port, Node ID>
@@ -96,15 +95,12 @@ func (kademlia *Kademlia) UpdateHandleBuckets(target_contact Contact){
 
 func (kademlia *Kademlia) AsynchronousLookupContact(target_contact *Contact){
     alpha := 3
-    contacted_nodes := ContactCandidates{contacts: []Contact{}}
+    contacted_nodes := ContactCandidates{}
     result_shortlist := ContactCandidates{kademlia.node_contact.FindClosestContacts(target_contact.ID, alpha)}
     response_channel := make(chan PayloadData, alpha) // Create a temporary response channel of size alpha for contact and contacts handling
   
     for len(contacted_nodes.contacts) < alpha && result_shortlist.Len() > 0{
         
-        //var mutex sync.Mutex
-        //var wait_group sync.WaitGroup
-
         for i := 0; i < result_shortlist.Len() && len(contacted_nodes.contacts) < alpha; i++ {
             
             contact := result_shortlist.contacts[i] //known contact 
@@ -114,6 +110,7 @@ func (kademlia *Kademlia) AsynchronousLookupContact(target_contact *Contact){
             contact_exist := contactExists(&contact, contacted_nodes)
 
             if (contact_exist){
+                fmt.Println("The node has already (skipping FIND_NODE) been contacted: ",contact)
                 continue
             }else{
                 go kademlia.NetworkInterface.AsynchronousFindNode(target_contact, target_addr, response_channel)
@@ -131,6 +128,12 @@ func (kademlia *Kademlia) AsynchronousLookupContact(target_contact *Contact){
         if (k_response.Error == nil && len(k_closest) > 0){
             contacted_nodes.contacts = append(contacted_nodes.contacts, k_contact) // Add contacted node      
             fmt.Println("Appended to contacted nodes list, now contacted nodes: ", contacted_nodes.contacts)
+        
+        }else {
+            fmt.Println("FIND_NODE RPC failed response, removing the node contact now!")
+            kademlia.node_contact.RemoveTargetContact(k_response.Contact)
+            //updated_shortlist := removeElement(result_shortlist, k_contact)
+            //result_shortlist.contacts = updated_shortlist
         }
 
         /*
@@ -148,6 +151,26 @@ func (kademlia *Kademlia) AsynchronousLookupContact(target_contact *Contact){
          
     }
 }
+
+func updateShortlist(shortlist ContactCandidates, newNodes ContactCandidates, targetID *KademliaID) ContactCandidates {
+    updatedShortlist := shortlist
+    
+    for _, newNode := range newNodes.contacts {
+        // Iterate over the new nodes from the response.
+        // Check if any of them are closer to the target.
+        for i, existingNode := range updatedShortlist.contacts {
+            if (newNode.ID.Less(existingNode.ID)) {
+                updatedShortlist.contacts[i] = newNode // Replace the existing node with the closer one.
+                break
+            }
+        }
+    }
+
+    // Sort the updated shortlist by distance to the target.
+    updatedShortlist.Sort()
+    return updatedShortlist
+}
+
 
 func contactExists(contact *Contact, contactedNodes ContactCandidates) bool {
     for _, existingContact := range contactedNodes.contacts {
