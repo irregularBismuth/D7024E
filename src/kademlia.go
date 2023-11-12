@@ -94,7 +94,7 @@ func (kademlia *Kademlia) UpdateHandleBuckets(target_contact Contact){
     kademlia.ShowNodeBucketStatus()
 }
 
-func (kademlia *Kademlia) AsynchronousLookupContact(target_contact Contact){
+func (kademlia *Kademlia) AsynchronousLookupContact(target_contact *Contact){
     alpha := 3
     contacted_nodes := ContactCandidates{contacts: []Contact{}}
     result_shortlist := ContactCandidates{kademlia.node_contact.FindClosestContacts(target_contact.ID, alpha)}
@@ -108,22 +108,54 @@ func (kademlia *Kademlia) AsynchronousLookupContact(target_contact Contact){
         for i := 0; i < result_shortlist.Len() && len(contacted_nodes.contacts) < alpha; i++ {
             
             contact := result_shortlist.contacts[i] //known contact 
-            target_addr,_ := net.ResolveUDPAddr("udp", contact.Address) 
-            go kademlia.NetworkInterface.AsynchronousFindNode(target_contact, target_addr, response_channel)
+            target_addr,_ := net.ResolveUDPAddr("udp", contact.Address)
+
+            // Check if node has already been contacted then continue else AsynchronousFindNode
+            contact_exist := contactExists(&contact, contacted_nodes)
+
+            if (contact_exist){
+                continue
+            }else{
+                go kademlia.NetworkInterface.AsynchronousFindNode(target_contact, target_addr, response_channel)
+            }
         
         }
         // TO FIX:
         // 1. Make so it updates already contacted
-        // 2. Update shortlist      
-        
+        // 2. Update shortlist   
         k_response := <- response_channel
         k_closest := k_response.Contacts
         k_contact := k_response.Contact
-        if len(k_closest) > 0 {
-            contacted_nodes.contacts = append(contacted_nodes.contacts, k_contact) // Add contacted node       
+        fmt.Println("Asynchronous k-response: ", k_response)
+        
+        if (k_response.Error == nil && len(k_closest) > 0){
+            contacted_nodes.contacts = append(contacted_nodes.contacts, k_contact) // Add contacted node      
+            fmt.Println("Appended to contacted nodes list, now contacted nodes: ", contacted_nodes.contacts)
         }
+
+        /*
+        for i:= 0; i < result_shortlist.Len(); i++{
+            //k_response := <- response_channel
+            //k_closest := k_response.Contacts
+            //k_contact := k_response.Contact
+            
+            if len(k_closest) > 0 {
+                contacted_nodes.contacts = append(contacted_nodes.contacts, k_contact) // Add contacted node      
+                result_shortlist.Append(k_closest)
+            }
+        }
+        */
          
     }
+}
+
+func contactExists(contact *Contact, contactedNodes ContactCandidates) bool {
+    for _, existingContact := range contactedNodes.contacts {
+        if existingContact.ID.Equals(contact.ID) {
+            return true
+        }
+    }
+    return false
 }
 
 

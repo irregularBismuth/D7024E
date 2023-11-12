@@ -88,13 +88,13 @@ func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, conta
     return nil, request_err
 }
 
-func (network *Network) AsynchronousFindNode(target_node Contact, dst_addr *net.UDPAddr, response_ch chan<- PayloadData){
+func (network *Network) AsynchronousFindNode(target_node *Contact, dst_addr *net.UDPAddr, response_ch chan<- PayloadData){
     //response, _ := network.FetchRPCResponse(FindNode,"lookup_rpc_id",target,target_addr)
    
     src_addr := network.srv.serverAddress
     request_id := "find_node_id"
     
-    src_payload := PayloadData{nil, target_node,"","",[]byte{},"",nil} //empty request payload 
+    src_payload := PayloadData{nil, *target_node,"","",[]byte{},"",nil} //empty request payload 
     new_request := CreateRPC(FindNode, request_id, src_payload, *src_addr, *dst_addr)
     network.SendRequestRPC(new_request)
 

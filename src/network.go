@@ -21,7 +21,7 @@ type NetworkInterface interface {
     SendRequestRPC(msg_payload *MessageBuilder) error
     SendResponseReply(response_msg *MessageBuilder)
     RequestResponseWorker(buffer []byte)
-    AsynchronousFindNode(target_node Contact, dst_addr *net.UDPAddr, response_ch chan<- PayloadData)
+    AsynchronousFindNode(target_node *Contact, dst_addr *net.UDPAddr, response_ch chan<- PayloadData)
 }
 
 type Network struct {
@@ -187,7 +187,7 @@ func (network *Network) BootstrapJoinProcess(){
         if (target_bucket.DoesBucketContactExist(rpc_response.Contact)){
             fmt.Printf("☑ The contact: %+v from response node was added.\n ",rpc_response.Contact)
             fmt.Println("Proceeding with step 2 and 'Node lookup on itself'...")
-            //network.Kademlia.LookupContact(&self_contact)
+            network.Kademlia.AsynchronousLookupContact(&self_contact)
             
         }else {
             fmt.Println("☐ The contact from response node was not added successfully!")
