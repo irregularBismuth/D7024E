@@ -8,9 +8,24 @@ import (
 	"strconv"
 )
 
+type NetworkInterface interface {
+    AddToRequestChannel(request_msg *MessageBuilder, request_err error)
+    AddToResponseChannel(response_msg *PayloadData, response_err error)
+    ReadResponseChannel(request MessageBuilder) *PayloadData
+    
+    BootstrapJoinProcess()
+    JoinNetwork() 
+    ProcessRequestChannel()
+    
+    FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr) (*PayloadData, error) 
+    SendRequestRPC(msg_payload *MessageBuilder) error
+    SendResponseReply(response_msg *MessageBuilder)
+    RequestResponseWorker(buffer []byte)
+    AsynchronousFindNode(target_node Contact, dst_addr *net.UDPAddr, response_ch chan<- PayloadData)
+}
 
 type Network struct {
-    node *Kademlia
+    Kademlia *Kademlia
     srv *UdpSocket
 }
 
@@ -52,12 +67,6 @@ func GetOutboundIP() net.Addr {
 
 func (network *Network) ListenServer() error{
   
-    // The ListenUDP method creates the server
-    //udp_connection, err := net.ListenUDP("udp", network.srv.serverAddress) // (SERVER-SIDE)
-    //udp_connection := network.srv.socketConnection // (SERVER-SIDE)
-
-    //defer udp_connection.Close()
-   
     // Need to add logic for incoming and outgoing packets handling - channels?
     buffer := make([]byte, 1024)
     for {
@@ -78,17 +87,21 @@ func GetLocalAddr() (*net.UDPAddr, error){
     }
 }
 
-func InitNodeNetwork() Network{
+func InitNodeNetwork() *Network{
     // Initialize a new node and associated UDP socket network 
     local_address, _ := GetLocalAddr() // returns Local UDPAddr end point = ip address : port 
     new_node := InitNode(local_address)
     new_udpsocket := NewUdpSocket(local_address)
 
     // Create new network object struct containing its node and UDPAddr data
-    new_network := Network{
-        node: &new_node,
+    new_network := &Network{
+        Kademlia: &new_node,
         srv: &new_udpsocket,
     }
+    new_network.Kademlia.SetNetworkInterface(new_network)
+    fmt.Println("Comparing Network instances: ",new_network)
+    fmt.Println("Comparing Network instances inside Kademlia: ",new_network.Kademlia.NetworkInterface)
+    
     return new_network
 } 
 
@@ -124,23 +137,40 @@ func GetBootnodeAddr() (*net.UDPAddr, error){
     return boot_addr, err
 }
 
-func (network *Network) ShowNodeBucketStatus(){
-    //current_buckets := network.node.node_contact.buckets
-    known_buckets := network.node.node_contact.buckets
-    for i:=0; i < len(known_buckets); i++{
-        bucket := known_buckets[i]
-        if bucket.Len() > 0 {
-            bucket.ShowContactsInBucket()
+// Send the RPC message to queue or channel for processing
+func (network *Network) AddToRequestChannel(request_msg *MessageBuilder, request_err error){
+    // should feed unique request ID for processing the correct response. 
+    fmt.Printf("Received RPC request: %s from: %s with request id: %s\n", request_msg.MessageType, request_msg.Response.Contact.Address, request_msg.RequestID) 
+    request_msg.Response.Error = request_err
+    network.srv.request_channel<-*request_msg
+}
+
+// Send the RPC response to channel for processing
+func (network *Network) AddToResponseChannel(response_msg *PayloadData, response_err error){
+    // should feed unique request ID for processing the correct response. 
+    response_msg.Error = response_err
+    network.srv.response_channel<-*response_msg
+}
+
+func (network *Network) ReadResponseChannel(request MessageBuilder) *PayloadData{
+    for response := range network.srv.response_channel{
+        if response.ResponseID == request.RequestID{
+            //response_ch <- response // transfer/send response payload to other channel
+            fmt.Printf("Received RPC response: %s to: %s with response id: %s\n", response.StringMessage, response.Contact.Address, response.ResponseID)
+            //fmt.Println("Response received updating contact bucket now!")
+            //network.Kademlia.UpdateHandleBuckets(response.Contact) // response bucket update 
+            //return &response, request_err
+            return &response
         }
     }
-     
+    return nil
 }
 
 func (network *Network) BootstrapJoinProcess(){
-    fmt.Println("Steps to perform:\n 1. Add contact\n 2. Node lookup on itself\n 3. Refresh")
+    fmt.Println("Steps to perform:\n ☐ Add contact\n ☐ Node lookup on itself\n ☐ Refresh")
     
     boot_addr, _ := GetBootnodeAddr() 
-    self_contact := network.node.node_contact.me
+    self_contact := network.Kademlia.node_contact.me
     
     // 1. Add contact 
     rpc_response, request_err := network.FetchRPCResponse(JoinNetwork, "my_rpc_id", &self_contact, boot_addr) 
@@ -149,14 +179,24 @@ func (network *Network) BootstrapJoinProcess(){
         fmt.Println("JoinNetwork request unsuccessful: ", request_err.Error())
     }else{
         //network.node.node_contact.AddContact(rpc_response.Contact)
-        fmt.Println("(1) Added the contact from response node: ",rpc_response.Contact)
+        //add if and else branch to check if the added contact was successful in the bootstrap process
+        
+        bucket_index := network.Kademlia.node_contact.getBucketIndex(rpc_response.Contact.ID)
+        target_bucket := network.Kademlia.node_contact.buckets[bucket_index]
+
+        if (target_bucket.DoesBucketContactExist(rpc_response.Contact)){
+            fmt.Printf("☑ The contact: %+v from response node was added.\n ",rpc_response.Contact)
+            fmt.Println("Proceeding with step 2 and 'Node lookup on itself'...")
+            //network.Kademlia.LookupContact(&self_contact)
+            
+        }else {
+            fmt.Println("☐ The contact from response node was not added successfully!")
+        }
  
         // 2. Node lookup on itself 
-        network.node.LookupContact(network, &self_contact)
+        //network.Kademlia.LookupContact(&self_contact)
 
         // Refresh step - picking a random ID in the bucket's range and perform a node search for that ID
-
-
     }
     
 }
@@ -172,18 +212,24 @@ func (network *Network) JoinNetwork() {
         network.BootstrapJoinProcess()
 
         // RPC tests here:
+        
+        /*
         boot_addr, _ := GetBootnodeAddr() 
         //conn, _ := BootnodeConnect(boot_addr)
-        contact := network.node.node_contact.me
+        contact := network.Kademlia.node_contact.me
         rpc_response, request_err := network.FetchRPCResponse(Ping, "my_rpc_ping_id", &contact, boot_addr)
         if request_err != nil || rpc_response.Error != nil {
             fmt.Printf("Request unsuccessful: %s or: %s\n",request_err.Error(),rpc_response.Error.Error())
         }else{
             fmt.Println("Controll response received: ", rpc_response.StringMessage) 
         }
-    }
+        */
 
+    }
+ 
 }
+
+/*
 
 // This function update appropriate k-bucket for the sender's node ID.
 // The argument takes the target contacts bucket received from requests or response
@@ -224,7 +270,7 @@ func (network *Network) UpdateHandleBuckets(target_contact Contact){
 }
 
 // This function is to handle RPC messages from the receiver side
-/*
+
 func (network *Network) RequestRPCHandler(buffer []byte){
 
     connection := network.srv.socketConnection // the request clients connection object
@@ -397,12 +443,12 @@ func (network *Network) SendFindContactMessage(contact *Contact) []byte {
 */
 func (network *Network) SendFindDataMessage(hash string) {
 	fmt.Println("1. Reached Send GET message")
-    network.node.LookupData(hash)
+    //network.node.LookupData(hash)
 }
 
 func (network *Network) SendStoreMessage(data string) {
     byteString := []byte(data)    
-    network.node.Store(byteString)
+    network.Kademlia.Store(byteString)
 }
 
 

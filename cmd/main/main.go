@@ -11,14 +11,11 @@ func init() { rand.Seed(time.Now().UTC().UnixNano())}
 
 func main(){
 
-    // TODO...
-    
-    //kademliaNode:=src.InitNode(src.GetOutboundIP())
     kademliaNetwork := src.InitNodeNetwork()
     go kademliaNetwork.ProcessRequestChannel()
-    go kademliaNetwork.ListenServer() 
+    go kademliaNetwork.ListenServer() // This uses the 'RequestResponseWorker' 
     kademliaNetwork.JoinNetwork()
-    go src.RunCLI(&kademliaNetwork)
+    //go src.RunCLI(&kademliaNetwork)
     
     //kademliaNetwork.BootstrapConnect()
    // go kademliaNetwork.ListenJoin()

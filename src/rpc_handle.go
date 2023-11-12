@@ -49,20 +49,6 @@ func CreateRPC(msg_type RPCTypes, request_id string, payload PayloadData, src_ad
     return &new_message
 }
 
-// Send the RPC message to queue or channel for processing
-func (network *Network) AddToRequestChannel(request_msg *MessageBuilder, request_err error){
-    // should feed unique request ID for processing the correct response. 
-    fmt.Printf("Received RPC request: %s from: %s with request id: %s\n", request_msg.MessageType, request_msg.Response.Contact.Address, request_msg.RequestID) 
-    request_msg.Response.Error = request_err
-    network.srv.request_channel<-*request_msg
-}
-
-// Send the RPC response to channel for processing
-func (network *Network) AddToResponseChannel(response_msg *PayloadData, response_err error){
-    // should feed unique request ID for processing the correct response. 
-    response_msg.Error = response_err
-    network.srv.response_channel<-*response_msg
-}
 
 func (network *Network) ProcessRequestChannel(){
     for {
@@ -72,6 +58,7 @@ func (network *Network) ProcessRequestChannel(){
                 fmt.Println("Channel closed. Exiting goroutine!")
                 return
             }
+            //go kademlia.SendResponseReply(&request_msg)
             go network.SendResponseReply(&request_msg)
 
         default: 
@@ -84,27 +71,36 @@ func (network *Network) ProcessRequestChannel(){
 // This will send a RPC request and wait for response value to return from the response channel 
 func (network *Network) FetchRPCResponse(rpc_type RPCTypes, rpc_id string, contact *Contact, dst_addr *net.UDPAddr) (*PayloadData, error){
     src_addr := network.srv.serverAddress
-    src_payload := PayloadData{nil, *contact,"","","","",nil} //empty request payload 
+    src_payload := PayloadData{nil, *contact,"","",[]byte{},"",nil} //empty request payload 
     new_request := CreateRPC(rpc_type, rpc_id, src_payload, *src_addr, *dst_addr)
     request_err := network.SendRequestRPC(new_request)
-    var default_byte []byte
-    var payload PayloadData
-    switch rpc_type {
-        case FindValue:
-            payload = PayloadData(nil,*contact,"","",default_byte)
-
-    } 
+   
+    // Should PayloadData be a pointer or not?
 
     for response := range network.srv.response_channel{
         if response.ResponseID == rpc_id{
             fmt.Printf("Received RPC response: %s to: %s with response id: %s\n", response.StringMessage, response.Contact.Address, response.ResponseID)
-            fmt.Println("Response received updating contact bucket now!")
-            network.UpdateHandleBuckets(response.Contact) // response bucket update 
-            
+            //fmt.Println("Response received updating contact bucket now!")
+            //network.Kademlia.UpdateHandleBuckets(response.Contact) 
             return &response, request_err
         }
     }
     return nil, request_err
+}
+
+func (network *Network) AsynchronousFindNode(target_node Contact, dst_addr *net.UDPAddr, response_ch chan<- PayloadData){
+    //response, _ := network.FetchRPCResponse(FindNode,"lookup_rpc_id",target,target_addr)
+   
+    src_addr := network.srv.serverAddress
+    request_id := "find_node_id"
+    
+    src_payload := PayloadData{nil, target_node,"","",[]byte{},"",nil} //empty request payload 
+    new_request := CreateRPC(FindNode, request_id, src_payload, *src_addr, *dst_addr)
+    network.SendRequestRPC(new_request)
+
+    response := network.ReadResponseChannel(*new_request)
+    response_ch <- *response // transfer/send response payload to other channel
+    
 }
 
 func (network *Network) SendRequestRPC(msg_payload *MessageBuilder) error{
@@ -130,36 +126,41 @@ func (network *Network) SendResponseReply(response_msg *MessageBuilder){
     dest_port := response_msg.DestinationAddress.Port
 
     // Checking if request message resulted in a successful nil error, which invokes 'UpdateHandleBuckets'
+    /*
     if response_msg.Response.Error == nil {
         fmt.Println("Request received updating contact buckets now!")
-        network.UpdateHandleBuckets(response_msg.Response.Contact)
+        network.Kademlia.UpdateHandleBuckets(response_msg.Response.Contact)
     }
+    */
 
     switch response_msg.MessageType{
     case Ping:
-        response_msg.Response.Contact = network.node.node_contact.me
+        response_msg.Response.Contact = network.Kademlia.node_contact.me
         response_msg.Response.StringMessage = "PONG"
     case Store:
 
     case FindNode:
         target_id := response_msg.Response.Contact.ID
-        k_closest_nodes := network.node.node_contact.FindClosestContacts(target_id,3)
+        k_closest_nodes := network.Kademlia.node_contact.FindClosestContacts(target_id,3)
         response_msg.Response.Contacts = k_closest_nodes
-        response_msg.Response.Contact = network.node.node_contact.me 
+        response_msg.Response.Contact = network.Kademlia.node_contact.me 
 
     case FindValue:
         
 
     case JoinNetwork:
-        response_msg.Response.Contact = network.node.node_contact.me
+        response_msg.Response.Contact = network.Kademlia.node_contact.me
         response_msg.Response.StringMessage = "Bootstrap joining!"
     }
+
     response_json, err := json.Marshal(response_msg)
     fmt.Printf("Sending RPC response: %v to client: %s:%d \n",response_msg.Response, dest_ip, dest_port)
+    
     if err !=nil {
         fmt.Println("Error seralizing response message",err)
         return
     }
+
     network.srv.socketConnection.WriteTo(response_json, response_msg.DestinationAddress)
 }
 
@@ -178,10 +179,17 @@ func (network *Network) RequestResponseWorker(buffer []byte){
     
     decoded_json_err := json.Unmarshal(buffer[:n], &request_msg) //deseralize json 
     if decoded_json_err != nil {
-            fmt.Println(decoded_json_err.Error())
-            error_msg = decoded_json_err
+        fmt.Println("decoded_json_err !=nil branch...")
+        fmt.Println(decoded_json_err.Error())
+        error_msg = decoded_json_err
     }else{
         error_msg = nil
+
+        if request_msg.Response.ResponseID != "bucket_full_ping_id"{
+            network.Kademlia.UpdateHandleBuckets(request_msg.Response.Contact)
+        }
+        //network.Kademlia.UpdateHandleBuckets(request_msg.Response.Contact)
+        //rpc_ping, request_err := kademlia.NetworkInterface.FetchRPCResponse(Ping, "bucket_full_ping_id", &my_contact, least_recently_addr)        
     }
 
     if request_msg.IsRequest{
